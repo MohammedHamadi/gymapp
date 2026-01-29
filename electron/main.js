@@ -2,6 +2,11 @@ import { app, BrowserWindow } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
 import db from "./db/client.js";
+import { setupMemberHandlers } from "./handlers/memberHandlers.js";
+import { setupPlanHandlers } from "./handlers/planHandlers.js";
+import { setupSubscriptionHandlers } from "./handlers/subscriptionHandlers.js";
+import { setupAccessLogHandlers } from "./handlers/accessLogHandlers.js";
+import { setupTransactionHandlers } from "./handlers/transactionHandlers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,22 +19,23 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: true,
-      contextIsolation: false, // For simplicity in this wrap, though contextIsolation: true is better for security
+      contextIsolation: true,
     },
   });
 
-  // In development, load the local Vite server
   if (!app.isPackaged) {
     mainWindow.loadURL("http://localhost:5173");
-    // Open the DevTools.
-    // mainWindow.webContents.openDevTools();
   } else {
-    // In production, load the index.html from the dist folder
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
   }
 }
 
 app.whenReady().then(() => {
+  setupMemberHandlers();
+  setupPlanHandlers();
+  setupSubscriptionHandlers();
+  setupAccessLogHandlers();
+  setupTransactionHandlers();
   createWindow();
 
   app.on("activate", function () {
