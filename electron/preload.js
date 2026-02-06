@@ -1,4 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
+console.log("✅ PRELOAD LOADED");
+
 
 contextBridge.exposeInMainWorld("api", {
   // Generic invoke wrapper for flexibility
