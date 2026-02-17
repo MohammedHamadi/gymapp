@@ -14,9 +14,19 @@ export function setupSubscriptionHandlers() {
     return subscriptionRepository.findByMemberId(memberId);
   });
 
-  ipcMain.handle("subscriptions:getActiveByMember", (event, memberId) => {
+  ipcMain.handle("subscriptions:findActiveByMemberId", (event, memberId) => {
     return subscriptionRepository.findActiveByMemberId(memberId);
   });
+
+  ipcMain.handle("subscriptions:getStats", () =>
+    subscriptionRepository.getStats(),
+  );
+  ipcMain.handle("subscriptions:getExpiring", () =>
+    subscriptionRepository.getExpiring(),
+  );
+  ipcMain.handle("subscriptions:renew", (event, memberId, subscription) =>
+    subscriptionRepository.renew(memberId, subscription),
+  );
 
   ipcMain.handle("subscriptions:create", (event, subscription) => {
     return subscriptionRepository.create(subscription);

@@ -16,10 +16,16 @@ export const planRepository = {
       INSERT INTO plans (name, type, duration_days, session_count, price, is_active)
       VALUES (@name, @type, @durationDays, @sessionCount, @price, @isActive)
     `);
-    // Ensure isActive is 0 or 1
+
+    // Map frontend snake_case files to backend camelCase parameters
     const data = {
-      ...plan,
-      isActive: plan.isActive ? 1 : 0,
+      name: plan.name,
+      type: plan.type,
+      durationDays: plan.duration_days || plan.durationDays,
+      sessionCount: plan.session_count || plan.sessionCount,
+      price: plan.price,
+      isActive:
+        plan.is_active !== undefined ? plan.is_active : plan.isActive ? 1 : 0,
     };
     return stmt.run(data);
   },
@@ -31,10 +37,16 @@ export const planRepository = {
           session_count = @sessionCount, price = @price, is_active = @isActive
       WHERE id = @id
     `);
+
     const data = {
-      ...plan,
-      isActive: plan.isActive ? 1 : 0,
       id,
+      name: plan.name,
+      type: plan.type,
+      durationDays: plan.duration_days || plan.durationDays,
+      sessionCount: plan.session_count || plan.sessionCount,
+      price: plan.price,
+      isActive:
+        plan.is_active !== undefined ? plan.is_active : plan.isActive ? 1 : 0,
     };
     return stmt.run(data);
   },

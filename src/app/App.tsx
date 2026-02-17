@@ -7,17 +7,20 @@ import { MembersTable } from "./components/MembersTable";
 import { MemberCard } from "./components/MemberCard";
 import { SettingsPage } from "./components/SettingsPage";
 import { ReportsPage } from "./components/ReportsPage";
-import { ProgramsPage } from "./components/ProgramsPage";
+import { PlansPage } from "./components/PlansPage";
 import { SalesPage } from "./components/SalesPage";
 import { AccessControlPage } from "./components/AccessControlPage";
 import { SubscriptionsPage } from "./components/SubscriptionsPage";
+import { RenewSubscriptionModal } from "./components/RenewSubscriptionModal";
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState("subscribers");
   const [selectedMember, setSelectedMember] = useState<any>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [showMemberCard, setShowMemberCard] = useState(false);
   const [cardData, setCardData] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
+  const [showRenewModal, setShowRenewModal] = useState(false);
   useEffect(() => {
     const fetchMembers = async () => {
       try {
@@ -73,8 +76,8 @@ export default function App() {
       case "reports":
         setCurrentPage("reports");
         break;
-      case "programs":
-        setCurrentPage("programs");
+      case "plans":
+        setCurrentPage("plans");
         break;
       case "sales":
         setCurrentPage("sales");
@@ -85,10 +88,9 @@ export default function App() {
       case "subscriptions":
         setCurrentPage("subscriptions");
         break;
-      case "logout":
-        if (confirm("Are you sure you want to logout?")) {
-          alert("Logging out...");
-          // In a real app, this would clear session and redirect to login
+      case "refresh":
+        if (confirm("Reload the application? Unsaved changes will be lost.")) {
+          window.location.reload();
         }
         break;
       case "exit":
@@ -104,48 +106,100 @@ export default function App() {
     }
   };
 
-  const handleSaveMember = (data: any) => {
-    // Add new member to the list
-    const newMember = {
-      ...data,
-      gender: "M",
-      subscriptionType: "Sessions",
-      price: "0",
-      sessionsRemaining: 0,
-      totalSessions: 0,
-      status: "Active",
-    };
-    setMembers([...members, newMember]);
-    setCardData(data);
-    setShowMemberCard(true);
+  const handleSaveMember = async (data: any) => {
+    try {
+      if (data.member.id) {
+        // Update existing member (currently only member details supported)
+        await window.api.members.update(data.member.id, {
+          ...data.member,
+          photoUrl: null, // Ensure parameter exists for SQL
+        });
+      } else {
+        // Create new member
+        // 1. Generate IDs client-side or let backend handle it.
+        // The form currently does not generate IDs, so we rely on backend or generate here.
+        // Let's generate a simple ID here or modify repository to auto-id.
+        // Looking at Schema, ID is TEXT.
+        // Looking at MemberForm, it was generating ID locally before my change?
+        // Ah, I removed the local ID generation in MemberForm.
+        // Ideally, backend should handle ID generation or we do it here.
+        // Let's generate one here to valid schema.
+        const memberId = `GYM${Date.now().toString().slice(-8)}`;
+        const qrCode = memberId; // QR Code same as ID
+
+        const newMember = {
+          ...data.member,
+          id: memberId,
+          qrCode: qrCode,
+          photoUrl: null,
+        };
+
+        await window.api.members.create(newMember);
+
+        // 2. Create Subscription if provided
+        if (data.subscription) {
+          const newSubscription = {
+            memberId: memberId,
+            planId: data.subscription.planId,
+            startDate: data.subscription.startDate,
+            endDate: data.subscription.endDate, // CAN BE NULL
+            remainingSessions: data.subscription.remainingSessions,
+            status: "ACTIVE" as const,
+            pricePaid: data.subscription.pricePaid,
+            autoRenew: 0,
+          };
+          await window.api.subscriptions.create(newSubscription);
+        }
+      }
+
+      // Refresh list
+      const members = await window.api.members.getAll();
+      setMembers(members);
+
+      alert(
+        data.member.id ? "Member updated!" : "Member and Subscription created!",
+      );
+
+      // Close/Clear
+      setSelectedMember(null);
+      setIsEditing(false);
+      // setCardData(newMember) // If we want to show card immediately
+    } catch (error) {
+      console.error("Error saving member:", error);
+      alert("Failed to save member.");
+    }
   };
 
   const handleNewMember = () => {
     setSelectedMember(null);
-    // Clear form by resetting selected member
-    alert("Form cleared. Ready to add a new member!");
+    setIsEditing(true);
   };
 
   const handleEdit = () => {
     if (selectedMember) {
-      alert(
-        `Editing member: ${selectedMember.firstName} ${selectedMember.lastName}`,
-      );
+      setIsEditing(true);
     } else {
       alert("Please select a member from the table first");
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedMember) {
       if (
         confirm(
           `Are you sure you want to delete ${selectedMember.firstName} ${selectedMember.lastName}?`,
         )
       ) {
-        setMembers(members.filter((m) => m.id !== selectedMember.id));
-        setSelectedMember(null);
-        alert("Member deleted successfully!");
+        try {
+          await window.api.members.delete(selectedMember.id);
+          const members = await window.api.members.getAll();
+          setMembers(members);
+          setSelectedMember(null);
+          alert("Member deleted successfully!");
+        } catch (e) {
+          console.error(e);
+          alert("Failed to delete member");
+        }
       }
     } else {
       alert("Please select a member from the table first");
@@ -162,27 +216,77 @@ export default function App() {
   };
 
   const handleViewHistory = () => {
-    if (selectedMember) {
+    if (selectedMember && selectedMember.subscription) {
       alert(
-        `Viewing subscription history for: ${selectedMember.firstName} ${selectedMember.lastName}\n\nHistory:\n- Start: ${selectedMember.startDate}\n- End: ${selectedMember.endDate}\n- Sessions Used: ${selectedMember.totalSessions - selectedMember.sessionsRemaining}/${selectedMember.totalSessions}`,
+        `Viewing subscription history for: ${selectedMember.firstName} ${selectedMember.lastName}\n\nLatest Subscription:\n- Plan: ${selectedMember.subscription.planName}\n- Status: ${selectedMember.subscription.status}\n- Start: ${selectedMember.subscription.startDate}\n- End: ${selectedMember.subscription.endDate || "N/A"}\n- Sessions Remaining: ${selectedMember.subscription.remainingSessions ?? "N/A"}`,
       );
     } else {
-      alert("Please select a member from the table first");
+      alert(
+        selectedMember
+          ? "No subscription found for this member."
+          : "Please select a member from the table first",
+      );
     }
   };
 
-  const handleToggleStatus = () => {
-    if (selectedMember) {
-      const newStatus =
-        selectedMember.status === "Active" ? "Inactive" : "Active";
-      const updatedMembers = members.map((m) =>
-        m.id === selectedMember.id ? { ...m, status: newStatus } : m,
-      );
-      setMembers(updatedMembers);
-      setSelectedMember({ ...selectedMember, status: newStatus });
-      alert(`Member status changed to: ${newStatus}`);
+  const handleToggleStatus = async () => {
+    if (selectedMember && selectedMember.subscription) {
+      const currentStatus = selectedMember.subscription.status;
+      const newStatus = currentStatus === "ACTIVE" ? "CANCELLED" : "ACTIVE";
+
+      if (confirm(`Change subscription status to ${newStatus}?`)) {
+        try {
+          await window.api.subscriptions.updateStatus(
+            selectedMember.subscription.id,
+            newStatus,
+          );
+
+          // Refresh
+          const members = await window.api.members.getAll();
+          setMembers(members);
+
+          // Update selected member view if needed
+          const updatedMember = members.find(
+            (m: any) => m.id === selectedMember.id,
+          );
+          setSelectedMember(updatedMember);
+
+          alert(`Subscription status updated to: ${newStatus}`);
+        } catch (error) {
+          console.error("Failed to update status", error);
+          alert("Error updating status");
+        }
+      }
     } else {
-      alert("Please select a member from the table first");
+      alert("Selected member has no active subscription to toggle.");
+    }
+  };
+
+  const handleRenew = () => {
+    if (selectedMember) {
+      setShowRenewModal(true);
+    } else {
+      alert("Please select a member first.");
+    }
+  };
+
+  const handleRenewSubmit = async (data: any) => {
+    try {
+      await window.api.subscriptions.renew(selectedMember.id, data);
+
+      // Refresh
+      const members = await window.api.members.getAll();
+      setMembers(members);
+
+      const updatedMember = members.find(
+        (m: any) => m.id === selectedMember.id,
+      );
+      setSelectedMember(updatedMember);
+
+      alert("Subscription renewed successfully!");
+    } catch (error) {
+      console.error("Renewal failed", error);
+      alert("Failed to renew subscription");
     }
   };
 
@@ -199,8 +303,11 @@ export default function App() {
             {/* Left Panel - Member Form (2/3 width) */}
             <div className="lg:col-span-2">
               <MemberForm
+                key={selectedMember ? selectedMember.id : "new-member"} // Force reset components
                 selectedMember={selectedMember}
+                isEditing={isEditing}
                 onSave={handleSaveMember}
+                onCancel={() => setIsEditing(false)}
               />
             </div>
 
@@ -218,10 +325,28 @@ export default function App() {
             onPrintTicket={handlePrintTicket}
             onViewHistory={handleViewHistory}
             onToggleStatus={handleToggleStatus}
+            onRenew={handleRenew}
+            onRefresh={async () => {
+              try {
+                const members = await window.api.members.getAll();
+                setMembers(members);
+                alert("Refreshed member list!");
+              } catch (error) {
+                console.error("Refresh failed:", error);
+                alert("Failed to refresh");
+              }
+            }}
           />
 
           {/* Members Table */}
-          <MembersTable members={members} onSelectMember={setSelectedMember} />
+          <MembersTable
+            members={members}
+            onSelectMember={(member) => {
+              setSelectedMember(member);
+              setIsEditing(false);
+            }}
+            selectedMemberId={selectedMember?.id}
+          />
         </div>
       )}
 
@@ -231,8 +356,8 @@ export default function App() {
       {/* Reports Page */}
       {currentPage === "reports" && <ReportsPage />}
 
-      {/* Programs Page */}
-      {currentPage === "programs" && <ProgramsPage />}
+      {/* Plans Page */}
+      {currentPage === "plans" && <PlansPage />}
 
       {/* Sales Page */}
       {currentPage === "sales" && <SalesPage />}
@@ -246,10 +371,29 @@ export default function App() {
       {/* Member Card Modal */}
       {showMemberCard && cardData && (
         <MemberCard
-          memberData={cardData}
+          memberData={{
+            ...cardData,
+            firstName: cardData.firstName,
+            lastName: cardData.lastName,
+            qrCode: cardData.qrCode,
+          }}
           onClose={() => setShowMemberCard(false)}
         />
       )}
+
+      <RenewSubscriptionModal
+        isOpen={showRenewModal}
+        onClose={() => setShowRenewModal(false)}
+        onRenew={handleRenewSubmit}
+        member={selectedMember}
+        currentPlanId={
+          selectedMember?.subscription?.planName
+            ? undefined // We don't have the ID directly easily available from selectedMember.subscription currently effectively.
+            : // Actually we can try to pass it if we had it.
+              // For now let user select.
+              undefined
+        }
+      />
     </div>
   );
 }

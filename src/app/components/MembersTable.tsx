@@ -11,9 +11,14 @@ import {
 interface MembersTableProps {
   members: any[];
   onSelectMember: (member: any) => void;
+  selectedMemberId?: string;
 }
 
-export function MembersTable({ members, onSelectMember }: MembersTableProps) {
+export function MembersTable({
+  members,
+  onSelectMember,
+  selectedMemberId,
+}: MembersTableProps) {
   return (
     <div className="bg-white rounded-lg shadow-lg border-2 border-blue-200 overflow-hidden">
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3">
@@ -25,11 +30,10 @@ export function MembersTable({ members, onSelectMember }: MembersTableProps) {
           <TableHeader>
             <TableRow className="bg-blue-50 border-b-2 border-blue-200">
               <TableHead className="text-blue-900">Name</TableHead>
-              <TableHead className="text-blue-900">Gender</TableHead>
               <TableHead className="text-blue-900">Start Date</TableHead>
               <TableHead className="text-blue-900">End Date</TableHead>
               <TableHead className="text-blue-900">Subscription Type</TableHead>
-              <TableHead className="text-blue-900">
+              <TableHead className="text-blue-900 text-center">
                 Sessions Remaining
               </TableHead>
               <TableHead className="text-blue-900">Status</TableHead>
@@ -40,33 +44,36 @@ export function MembersTable({ members, onSelectMember }: MembersTableProps) {
               <TableRow
                 key={member.id}
                 onClick={() => onSelectMember(member)}
-                className="cursor-pointer hover:bg-blue-50 transition-colors border-b border-blue-100"
+                className={`cursor-pointer transition-colors border-b border-blue-100 ${
+                  selectedMemberId === member.id
+                    ? "bg-blue-100 border-l-4 border-l-blue-600"
+                    : "hover:bg-blue-50"
+                }`}
               >
-                <TableCell className="text-blue-900">
+                <TableCell className="text-blue-900 font-medium">
                   {member.firstName} {member.lastName}
                 </TableCell>
-                <TableCell className="text-blue-900">{member.gender}</TableCell>
                 <TableCell className="text-blue-900">
-                  {member.startDate}
+                  {member.subscription?.startDate || "-"}
                 </TableCell>
                 <TableCell className="text-blue-900">
-                  {member.endDate}
+                  {member.subscription?.endDate || "-"}
                 </TableCell>
                 <TableCell className="text-blue-900">
-                  {member.subscriptionType}
+                  {member.subscription?.planName || "-"}
                 </TableCell>
                 <TableCell className="text-blue-900 text-center">
-                  {member.sessionsRemaining}
+                  {member.subscription?.remainingSessions ?? "-"}
                 </TableCell>
                 <TableCell>
                   <Badge
                     className={
-                      member.status === "Active"
+                      member.subscription?.status === "ACTIVE"
                         ? "bg-green-600 hover:bg-green-700"
                         : "bg-red-600 hover:bg-red-700"
                     }
                   >
-                    {member.status}
+                    {member.subscription?.status || "No Plan"}
                   </Badge>
                 </TableCell>
               </TableRow>

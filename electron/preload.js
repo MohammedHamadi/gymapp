@@ -1,7 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 console.log("✅ PRELOAD LOADED");
 
-
 contextBridge.exposeInMainWorld("api", {
   // Generic invoke wrapper for flexibility
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
@@ -28,7 +27,11 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("subscriptions:getByMember", memberId),
     getActiveByMember: (memberId) =>
       ipcRenderer.invoke("subscriptions:getActiveByMember", memberId),
+    getStats: () => ipcRenderer.invoke("subscriptions:getStats"),
+    getExpiring: () => ipcRenderer.invoke("subscriptions:getExpiring"),
     create: (data) => ipcRenderer.invoke("subscriptions:create", data),
+    renew: (memberId, data) =>
+      ipcRenderer.invoke("subscriptions:renew", memberId, data),
     update: (id, data) => ipcRenderer.invoke("subscriptions:update", id, data),
     updateStatus: (id, status) =>
       ipcRenderer.invoke("subscriptions:updateStatus", id, status),
