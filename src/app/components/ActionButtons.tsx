@@ -1,5 +1,14 @@
-import { UserPlus, Edit, Trash2, Printer, History, Power } from 'lucide-react';
-import { Button } from './ui/button';
+import {
+  UserPlus,
+  Edit,
+  Trash2,
+  Printer,
+  History,
+  ToggleLeft,
+  RefreshCw,
+  RotateCw,
+} from "lucide-react";
+import { Button } from "./ui/button";
 
 interface ActionButtonsProps {
   onNewMember: () => void;
@@ -8,37 +17,96 @@ interface ActionButtonsProps {
   onPrintTicket: () => void;
   onViewHistory: () => void;
   onToggleStatus: () => void;
+  onRenew: () => void;
+  onRefresh: () => void;
 }
 
 const actionButtons = [
-  { icon: UserPlus, label: 'New Member', color: 'bg-green-600 hover:bg-green-700', action: 'newMember' },
-  { icon: Edit, label: 'Edit', color: 'bg-blue-600 hover:bg-blue-700', action: 'edit' },
-  { icon: Trash2, label: 'Delete', color: 'bg-red-600 hover:bg-red-700', action: 'delete' },
-  { icon: Printer, label: 'Print Ticket', color: 'bg-purple-600 hover:bg-purple-700', action: 'printTicket' },
-  { icon: History, label: 'Subscription History', color: 'bg-orange-600 hover:bg-orange-700', action: 'viewHistory' },
-  { icon: Power, label: 'Activate/Deactivate', color: 'bg-yellow-600 hover:bg-yellow-700', action: 'toggleStatus' },
+  {
+    icon: UserPlus,
+    label: "New Member",
+    color: "bg-green-600 hover:bg-green-700",
+    action: "newMember",
+  },
+  {
+    icon: Edit,
+    label: "Edit",
+    color: "bg-blue-600 hover:bg-blue-700",
+    action: "edit",
+  },
+  {
+    icon: Trash2,
+    label: "Delete",
+    color: "bg-red-600 hover:bg-red-700",
+    action: "delete",
+  },
+  {
+    icon: Printer,
+    label: "Print Ticket",
+    color: "bg-purple-600 hover:bg-purple-700",
+    action: "printTicket",
+  },
+  {
+    icon: History,
+    label: "Subscription History",
+    color: "bg-orange-600 hover:bg-orange-700",
+    action: "viewHistory",
+  },
+  {
+    icon: ToggleLeft,
+    label: "Activate/Deactivate",
+    color: "bg-yellow-600 hover:bg-yellow-700",
+    action: "toggleStatus",
+  },
+  {
+    icon: RefreshCw,
+    label: "Refresh",
+    color: "bg-gray-600 hover:bg-gray-700",
+    action: "refresh",
+  },
+  {
+    icon: RotateCw,
+    label: "Renew",
+    color: "bg-teal-600 hover:bg-teal-700",
+    action: "renew",
+  },
 ];
 
-export function ActionButtons({ onNewMember, onEdit, onDelete, onPrintTicket, onViewHistory, onToggleStatus }: ActionButtonsProps) {
+export function ActionButtons({
+  onNewMember,
+  onEdit,
+  onDelete,
+  onPrintTicket,
+  onViewHistory,
+  onToggleStatus,
+  onRenew,
+  onRefresh,
+}: ActionButtonsProps) {
   const handleClick = (action: string) => {
     switch (action) {
-      case 'newMember':
+      case "newMember":
         onNewMember();
         break;
-      case 'edit':
+      case "edit":
         onEdit();
         break;
-      case 'delete':
+      case "delete":
         onDelete();
         break;
-      case 'printTicket':
+      case "printTicket":
         onPrintTicket();
         break;
-      case 'viewHistory':
+      case "viewHistory":
         onViewHistory();
         break;
-      case 'toggleStatus':
+      case "toggleStatus":
         onToggleStatus();
+        break;
+      case "refresh":
+        onRefresh();
+        break;
+      case "renew":
+        onRenew();
         break;
     }
   };
