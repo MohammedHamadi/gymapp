@@ -21,4 +21,8 @@ export function setupMemberHandlers() {
   ipcMain.handle("members:delete", (event, id) => {
     return memberRepository.delete(id);
   });
+
+  ipcMain.handle("members:findByIdWithSubscription", (event, id) => {
+    return memberRepository.findByIdWithSubscription(id);
+  });
 }

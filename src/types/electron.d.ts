@@ -8,6 +8,7 @@ export interface ElectronApi {
     create: (member: Partial<Member>) => Promise<any>;
     update: (id: string, member: Partial<Member>) => Promise<any>;
     delete: (id: string) => Promise<any>;
+    getByIdWithSubscription: (id: string) => Promise<any>;
   };
   plans: {
     getAll: () => Promise<Plan[]>;
@@ -21,16 +22,29 @@ export interface ElectronApi {
     getById: (id: number) => Promise<Subscription>;
     getByMember: (memberId: string) => Promise<Subscription[]>;
     getActiveByMember: (memberId: string) => Promise<Subscription[]>;
+    getStats: () => Promise<any>;
+    getExpiring: () => Promise<any[]>;
     create: (subscription: Partial<Subscription>) => Promise<any>;
     update: (id: number, subscription: Partial<Subscription>) => Promise<any>;
     updateStatus: (id: number, status: string) => Promise<any>;
     decrementSession: (id: number) => Promise<any>;
     delete: (id: number) => Promise<any>;
+    renew: (memberId: string, data: any) => Promise<any>;
   };
   accessLogs: {
     create: (log: Partial<AccessLog>) => Promise<any>;
     getByMember: (memberId: string) => Promise<AccessLog[]>;
     getRecent: (limit?: number) => Promise<AccessLog[]>;
+    validate: (data: {
+      id: string;
+      type: "CHECK_IN" | "CHECK_OUT";
+      subscriptionId?: number;
+    }) => Promise<any>;
+    getCurrentlyInside: () => Promise<any[]>;
+    getTodayStats: () => Promise<{
+      totalCheckIns: number;
+      totalDenied: number;
+    }>;
   };
   transactions: {
     create: (transaction: Partial<Transaction>) => Promise<any>;

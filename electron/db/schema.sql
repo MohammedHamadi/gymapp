@@ -42,11 +42,13 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 CREATE TABLE IF NOT EXISTS access_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     member_id TEXT NOT NULL,
+    subscription_id INTEGER,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     type TEXT CHECK(type IN ('CHECK_IN', 'CHECK_OUT')) NOT NULL,
     status TEXT CHECK(status IN ('GRANTED', 'DENIED')) NOT NULL,
     denial_reason TEXT,
-    FOREIGN KEY (member_id) REFERENCES members(id)
+    FOREIGN KEY (member_id) REFERENCES members(id),
+    FOREIGN KEY (subscription_id) REFERENCES subscriptions(id)
 );
 
 -- Transactions Table

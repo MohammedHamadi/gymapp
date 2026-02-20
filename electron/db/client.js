@@ -21,3 +21,12 @@ const schema = fs.readFileSync(schemaPath, "utf8");
 db.exec(schema);
 
 export default db;
+
+// Safe migration: add subscription_id to access_logs if not present
+try {
+  db.exec(
+    "ALTER TABLE access_logs ADD COLUMN subscription_id INTEGER REFERENCES subscriptions(id)",
+  );
+} catch {
+  // Column already exists, ignore
+}

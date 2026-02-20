@@ -52,6 +52,54 @@ export const memberRepository = {
     return stmt.get(id);
   },
 
+  findByIdWithSubscription: (id) => {
+    const stmt = db.prepare(`
+        SELECT 
+            m.id, m.first_name, m.last_name, m.phone, m.email, m.qr_code, m.photo_url, m.created_at,
+            s.id as subscription_id,
+            s.status as subscription_status,
+            s.start_date as subscription_start_date,
+            s.end_date as subscription_end_date,
+            s.remaining_sessions,
+            p.name as plan_name,
+            p.type as plan_type
+        FROM members m
+        LEFT JOIN subscriptions s ON s.id = (
+            SELECT id FROM subscriptions 
+            WHERE member_id = m.id 
+            ORDER BY created_at DESC 
+            LIMIT 1
+        )
+        LEFT JOIN plans p ON s.plan_id = p.id
+        WHERE m.id = ?
+    `);
+
+    const row = stmt.get(id);
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      phone: row.phone,
+      email: row.email,
+      qrCode: row.qr_code,
+      photoUrl: row.photo_url,
+      createdAt: row.created_at,
+      subscription: row.subscription_id
+        ? {
+            id: row.subscription_id,
+            status: row.subscription_status,
+            startDate: row.subscription_start_date,
+            endDate: row.subscription_end_date,
+            remainingSessions: row.remaining_sessions,
+            planName: row.plan_name,
+            planType: row.plan_type,
+          }
+        : null,
+    };
+  },
+
   create: (member) => {
     const stmt = db.prepare(`
       INSERT INTO members (id, first_name, last_name, phone, email, qr_code, photo_url)

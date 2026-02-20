@@ -173,7 +173,7 @@ export function SubscriptionsPage() {
                     Days Left
                   </th>
                   <th className="text-center py-3 px-4 text-blue-900">
-                    Auto-Renew
+                    Sessions Left
                   </th>
                   <th className="text-center py-3 px-4 text-blue-900">
                     Status
@@ -224,14 +224,10 @@ export function SubscriptionsPage() {
                             : `${daysLeft} days`}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-center">
-                        <Badge
-                          className={
-                            sub.auto_renew ? "bg-green-600" : "bg-gray-400"
-                          }
-                        >
-                          {sub.auto_renew ? "Yes" : "No"}
-                        </Badge>
+                      <td className="py-3 px-4 text-center text-blue-900 font-bold">
+                        {sub.remaining_sessions !== null
+                          ? sub.remaining_sessions
+                          : "—"}
                       </td>
                       <td className="py-3 px-4 text-center">
                         <Badge

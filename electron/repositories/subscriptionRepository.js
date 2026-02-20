@@ -30,7 +30,7 @@ export const subscriptionRepository = {
 
   findActiveByMemberId: (memberId) => {
     const stmt = db.prepare(`
-      SELECT s.*, p.name as plan_name
+      SELECT s.*, p.name as plan_name, p.type as plan_type
       FROM subscriptions s
       JOIN plans p ON s.plan_id = p.id
       WHERE s.member_id = ? AND s.status = 'ACTIVE'

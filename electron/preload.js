@@ -12,6 +12,8 @@ contextBridge.exposeInMainWorld("api", {
     create: (data) => ipcRenderer.invoke("members:create", data),
     update: (id, data) => ipcRenderer.invoke("members:update", id, data),
     delete: (id) => ipcRenderer.invoke("members:delete", id),
+    getByIdWithSubscription: (id) =>
+      ipcRenderer.invoke("members:findByIdWithSubscription", id),
   },
   plans: {
     getAll: () => ipcRenderer.invoke("plans:getAll"),
@@ -44,6 +46,10 @@ contextBridge.exposeInMainWorld("api", {
     getByMember: (memberId) =>
       ipcRenderer.invoke("accessLogs:getByMember", memberId),
     getRecent: (limit) => ipcRenderer.invoke("accessLogs:getRecent", limit),
+    validate: (data) => ipcRenderer.invoke("accessLogs:validate", data),
+    getCurrentlyInside: () =>
+      ipcRenderer.invoke("accessLogs:getCurrentlyInside"),
+    getTodayStats: () => ipcRenderer.invoke("accessLogs:getTodayStats"),
   },
   transactions: {
     create: (data) => ipcRenderer.invoke("transactions:create", data),
