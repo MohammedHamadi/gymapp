@@ -1,3 +1,4 @@
+import Barcode from "react-barcode";
 import { X } from "lucide-react";
 import { Button } from "./ui/button";
 const profileImage =
@@ -95,10 +96,16 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
 
           {/* QR Code Section */}
           <div className="mt-6 pt-4 border-t-2 border-white/30 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-blue-100 uppercase mb-1">QR Code</p>
-              <p className="font-mono text-sm">{memberData.qrCode}</p>
-            </div>
+        <div className="bg-white p-2 rounded-lg">
+  <Barcode
+    value={memberData.id}
+    format="CODE128"
+    width={1.5}
+    height={60}
+    fontSize={14}
+    displayValue={false}
+  />
+</div>
             <div className="w-20 h-20 bg-white rounded-lg flex items-center justify-center">
               <div className="w-16 h-16 bg-gray-800 rounded"></div>
             </div>

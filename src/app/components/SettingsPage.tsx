@@ -23,7 +23,7 @@ export function SettingsPage() {
               <Label htmlFor="gymName">Gym Name</Label>
               <Input 
                 id="gymName" 
-                defaultValue="FITNESS GYM" 
+                defaultValue="CROSSTENIX" 
                 className="border-blue-300 focus:border-blue-500"
               />
             </div>

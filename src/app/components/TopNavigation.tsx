@@ -5,9 +5,9 @@ import {
   DollarSign,
   Settings,
   FileText,
-  BookOpen,
   Calendar,
   RefreshCw,
+  BookOpen,
   X,
 } from "lucide-react";
 
@@ -47,7 +47,7 @@ const navigationItems = [
     color: "bg-purple-600",
     action: "reports",
   },
-  { icon: BookOpen, label: "Journal", color: "bg-blue-500", action: "journal" },
+
   { icon: Calendar, label: "Plans", color: "bg-cyan-600", action: "plans" },
   {
     icon: RefreshCw,
@@ -55,7 +55,7 @@ const navigationItems = [
     color: "bg-indigo-600",
     action: "refresh",
   },
-  { icon: X, label: "Exit", color: "bg-red-600", action: "exit" },
+
 ];
 
 export function TopNavigation({ onNavigate }: TopNavigationProps) {
