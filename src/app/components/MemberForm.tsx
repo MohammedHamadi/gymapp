@@ -78,20 +78,6 @@ export function MemberForm({
 
       // Populate subscription details if available
       if (selectedMember.subscription) {
-        // We need to find the plan ID based on planName or if we have planId in the subscription object
-        // The current fetch returns planName and planType but not planId directly in the subscription object of findAll
-        // We might need to match by name or update findAll to include planId
-        // Let's check findAll in memberRepository.js - it DOES select plan_id in the subquery but might not explicitly map it in the result
-
-        // Wait, looking at memberRepository.js:
-        // s.plan_id is selected in the subquery but NOT in the main SELECT list of stmt/stmt2?
-        // Ah, checked repository:
-        // SELECT ... s.id as subscription_id, ... p.name as plan_name ...
-        // It does NOT select s.plan_id or p.id as a top level column to map to subscription.planId
-
-        // Use checks to see if we can match plan name for now, or default to empty
-        // ideally we should update repository to return planId.
-        // Let's try to match by name from the 'plans' state if possible.
         const foundPlan = plans.find(
           (p) => p.name === selectedMember.subscription.planName,
         );
@@ -276,7 +262,7 @@ export function MemberForm({
           {/* Photo Upload Section */}
           <div className="flex flex-col items-center gap-4 mb-4">
             <div className="relative group">
-              <div className="w-32 h-32 bg-gray-100 rounded-full overflow-hidden border-2 border-blue-200 flex items-center justify-center">
+              <div className="w-32 h-32 bg-gray-100  overflow-hidden border-4 border-blue-200 flex items-center justify-center">
                 {photoPreview ? (
                   <img
                     src={photoPreview}
@@ -292,7 +278,7 @@ export function MemberForm({
                   htmlFor="photo-upload"
                   className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer shadow-lg hover:bg-blue-700 transition-colors"
                 >
-                  <Camera className="w-4 h-4" />
+                  <Upload className="w-4 h-4" />
                   <input
                     type="file"
                     id="photo-upload"

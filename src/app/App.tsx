@@ -295,7 +295,7 @@ export default function App() {
           {/* Member Information & Status Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             {/* Left Panel - Member Form (2/3 width) */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-3">
               <MemberForm
                 selectedMember={selectedMember}
                 isEditing={isEditing}
@@ -304,10 +304,10 @@ export default function App() {
               />
             </div>
 
-            {/* Right Panel - Member Status (1/3 width) */}
+            {/* Right Panel - Member Status (1/3 width)
             <div className="lg:col-span-1">
               <MemberStatus selectedMember={selectedMember} />
-            </div>
+            </div> */}
           </div>
 
           {/* Action Buttons */}
