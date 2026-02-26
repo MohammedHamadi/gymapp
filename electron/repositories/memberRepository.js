@@ -134,9 +134,14 @@ export const memberRepository = {
     const deleteMember = db.prepare("DELETE FROM members WHERE id = ?");
 
     const transaction = db.transaction(() => {
-      deleteSubscriptions.run(id);
+      // Delete children of subscriptions AND members first
       deleteAccessLogs.run(id);
       deleteTransactions.run(id);
+
+      // Delete subscriptions (child of members, parent of access_logs/transactions)
+      deleteSubscriptions.run(id);
+
+      // Delete member last
       deleteMember.run(id);
     });
 
