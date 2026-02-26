@@ -93,12 +93,6 @@ export default function App() {
           window.location.reload();
         }
         break;
-      case "exit":
-        if (confirm("Are you sure you want to exit the application?")) {
-          alert("Closing application...");
-          // In a real app, this would close the application window
-        }
-        break;
       default:
         alert(
           `${page.charAt(0).toUpperCase() + page.slice(1)} page - Coming soon!`,
@@ -301,9 +295,8 @@ export default function App() {
           {/* Member Information & Status Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             {/* Left Panel - Member Form (2/3 width) */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-3">
               <MemberForm
-                key={selectedMember ? selectedMember.id : "new-member"} // Force reset components
                 selectedMember={selectedMember}
                 isEditing={isEditing}
                 onSave={handleSaveMember}
@@ -311,10 +304,10 @@ export default function App() {
               />
             </div>
 
-            {/* Right Panel - Member Status (1/3 width) */}
+            {/* Right Panel - Member Status (1/3 width)
             <div className="lg:col-span-1">
               <MemberStatus selectedMember={selectedMember} />
-            </div>
+            </div> */}
           </div>
 
           {/* Action Buttons */}

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS members (
     email TEXT,
     qr_code TEXT UNIQUE NOT NULL,
     photo_url TEXT,
+    photo BLOB,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
