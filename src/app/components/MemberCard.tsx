@@ -1,7 +1,8 @@
 import Barcode from "react-barcode";
 import { X } from "lucide-react";
 import { Button } from "./ui/button";
-const profileImage =
+// Placeholder if no photo is available
+const defaultProfileImage =
   "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop";
 
 interface MemberCardProps {
@@ -13,6 +14,7 @@ interface MemberCardProps {
     phone: string;
     startDate: string;
     endDate: string;
+    photo?: any;
   };
   onClose: () => void;
 }
@@ -23,6 +25,23 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const getProfileImage = () => {
+    if (memberData.photo) {
+      if (typeof memberData.photo === "string") {
+        return memberData.photo; // already base64 or url
+      }
+      // If it's a Buffer/Uint8Array from SQLite
+      const base64 = btoa(
+        new Uint8Array(memberData.photo).reduce(
+          (data, byte) => data + String.fromCharCode(byte),
+          "",
+        ),
+      );
+      return `data:image/jpeg;base64,${base64}`;
+    }
+    return defaultProfileImage;
   };
 
   return (
@@ -68,7 +87,7 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
             <div className="col-span-1">
               <div className="w-32 h-32 bg-white rounded-lg overflow-hidden border-4 border-white/50">
                 <img
-                  src={profileImage}
+                  src={getProfileImage()}
                   alt="Member"
                   className="w-full h-full object-cover"
                 />
@@ -96,16 +115,16 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
 
           {/* QR Code Section */}
           <div className="mt-6 pt-4 border-t-2 border-white/30 flex items-center justify-between">
-        <div className="bg-white p-2 rounded-lg">
-  <Barcode
-    value={memberData.id}
-    format="CODE128"
-    width={1.5}
-    height={60}
-    fontSize={14}
-    displayValue={false}
-  />
-</div>
+            <div className="bg-white p-2 rounded-lg">
+              <Barcode
+                value={memberData.id}
+                format="CODE128"
+                width={1.5}
+                height={60}
+                fontSize={14}
+                displayValue={false}
+              />
+            </div>
             <div className="w-20 h-20 bg-white rounded-lg flex items-center justify-center">
               <div className="w-16 h-16 bg-gray-800 rounded"></div>
             </div>

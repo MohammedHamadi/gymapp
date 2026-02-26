@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Button } from "./ui/button";
-import { Save } from "lucide-react";
+import { Save, Upload, User, Camera } from "lucide-react";
 
 interface MemberFormProps {
   selectedMember?: any;
@@ -29,6 +29,8 @@ export function MemberForm({
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [photo, setPhoto] = useState<Buffer | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   // Subscription State
   const [plans, setPlans] = useState<any[]>([]);
@@ -59,6 +61,20 @@ export function MemberForm({
       setLastName(selectedMember.lastName || "");
       setPhone(selectedMember.phone || "");
       setEmail(selectedMember.email || "");
+      setPhoto(selectedMember.photo || null);
+
+      if (selectedMember.photo) {
+        // Convert Buffer to base64 for preview
+        const base64 = btoa(
+          new Uint8Array(selectedMember.photo).reduce(
+            (data, byte) => data + String.fromCharCode(byte),
+            "",
+          ),
+        );
+        setPhotoPreview(`data:image/jpeg;base64,${base64}`);
+      } else {
+        setPhotoPreview(null);
+      }
 
       // Populate subscription details if available
       if (selectedMember.subscription) {
@@ -99,6 +115,8 @@ export function MemberForm({
       setLastName("");
       setPhone("");
       setEmail("");
+      setPhoto(null);
+      setPhotoPreview(null);
       setSelectedPlanId("");
       setStartDate(getTodayDate());
       setEndDate("");
@@ -131,6 +149,25 @@ export function MemberForm({
       } else {
         setRemainingSessions("");
       }
+    }
+  };
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        setPhotoPreview(result);
+
+        // Convert base64 to Buffer-like structure for IPC
+        fetch(result)
+          .then((res) => res.arrayBuffer())
+          .then((buffer) => {
+            setPhoto(new Uint8Array(buffer) as any);
+          });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -185,6 +222,7 @@ export function MemberForm({
         lastName,
         phone,
         email,
+        photo,
       },
       subscription: selectedPlanId
         ? {
@@ -234,6 +272,43 @@ export function MemberForm({
           <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">
             Personal Details
           </h3>
+
+          {/* Photo Upload Section */}
+          <div className="flex flex-col items-center gap-4 mb-4">
+            <div className="relative group">
+              <div className="w-32 h-32 bg-gray-100 rounded-full overflow-hidden border-2 border-blue-200 flex items-center justify-center">
+                {photoPreview ? (
+                  <img
+                    src={photoPreview}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-16 h-16 text-gray-400" />
+                )}
+              </div>
+              {!isViewMode && (
+                <label
+                  htmlFor="photo-upload"
+                  className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer shadow-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Camera className="w-4 h-4" />
+                  <input
+                    type="file"
+                    id="photo-upload"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handlePhotoChange}
+                  />
+                </label>
+              )}
+            </div>
+            {!isViewMode && (
+              <p className="text-xs text-gray-500">
+                Click icon to upload photo
+              </p>
+            )}
+          </div>
 
           <div>
             <Label htmlFor="firstName" className="text-blue-900 mb-2">

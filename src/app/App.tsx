@@ -297,7 +297,6 @@ export default function App() {
             {/* Left Panel - Member Form (2/3 width) */}
             <div className="lg:col-span-2">
               <MemberForm
-                key={selectedMember ? selectedMember.id : "new-member"} // Force reset components
                 selectedMember={selectedMember}
                 isEditing={isEditing}
                 onSave={handleSaveMember}

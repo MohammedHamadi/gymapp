@@ -111,8 +111,15 @@ export function AccessControlPage() {
 
   const handleSubscriptionSelect = (subscriptionId: number) => {
     if (!pendingSelection) return;
-    setPendingSelection(null);
+
+    // Process request first while modal is still technically open (or immediately about to close)
     handleAccessRequest(pendingSelection.memberId, subscriptionId);
+
+    // Delay unmounting the modal slightly to allow any Radix components
+    // to finish their cleanup (removing pointer-events: none from body)
+    setTimeout(() => {
+      setPendingSelection(null);
+    }, 100);
   };
 
   const handleManualSearch = (e: React.FormEvent) => {

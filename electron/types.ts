@@ -6,6 +6,7 @@ export interface Member {
   email: string | null;
   qr_code: string;
   photo_url: string | null;
+  photo: Buffer | Uint8Array | null;
   created_at: string;
   updated_at: string;
 }

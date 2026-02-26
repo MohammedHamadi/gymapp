@@ -5,7 +5,7 @@ export const memberRepository = {
     // Efficient "Latest" retrieval in SQLite:
     const stmt = db.prepare(`
         SELECT 
-            m.id, m.first_name, m.last_name, m.phone, m.email, m.qr_code, m.photo_url, m.created_at,
+            m.id, m.first_name, m.last_name, m.phone, m.email, m.qr_code, m.photo_url, m.photo, m.created_at,
             s.id as subscription_id,
             s.status as subscription_status,
             s.start_date as subscription_start_date,
@@ -32,6 +32,7 @@ export const memberRepository = {
       email: row.email,
       qrCode: row.qr_code,
       photoUrl: row.photo_url,
+      photo: row.photo,
       createdAt: row.created_at,
       subscription: row.subscription_id
         ? {
@@ -55,7 +56,7 @@ export const memberRepository = {
   findByIdWithSubscription: (id) => {
     const stmt = db.prepare(`
         SELECT 
-            m.id, m.first_name, m.last_name, m.phone, m.email, m.qr_code, m.photo_url, m.created_at,
+            m.id, m.first_name, m.last_name, m.phone, m.email, m.qr_code, m.photo_url, m.photo, m.created_at,
             s.id as subscription_id,
             s.status as subscription_status,
             s.start_date as subscription_start_date,
@@ -85,6 +86,7 @@ export const memberRepository = {
       email: row.email,
       qrCode: row.qr_code,
       photoUrl: row.photo_url,
+      photo: row.photo,
       createdAt: row.created_at,
       subscription: row.subscription_id
         ? {
@@ -102,17 +104,17 @@ export const memberRepository = {
 
   create: (member) => {
     const stmt = db.prepare(`
-      INSERT INTO members (id, first_name, last_name, phone, email, qr_code, photo_url)
-      VALUES (@id, @firstName, @lastName, @phone, @email, @qrCode, @photoUrl)
+       INSERT INTO members (id, first_name, last_name, phone, email, qr_code, photo_url, photo)
+      VALUES (@id, @firstName, @lastName, @phone, @email, @qrCode, @photoUrl, @photo)
     `);
     return stmt.run(member);
   },
 
   update: (id, member) => {
     const stmt = db.prepare(`
-      UPDATE members 
+       UPDATE members 
       SET first_name = @firstName, last_name = @lastName, phone = @phone, 
-          email = @email, photo_url = @photoUrl, updated_at = CURRENT_TIMESTAMP
+          email = @email, photo_url = @photoUrl, photo = @photo, updated_at = CURRENT_TIMESTAMP
       WHERE id = @id
     `);
     // Pass id specifically along with the member object
