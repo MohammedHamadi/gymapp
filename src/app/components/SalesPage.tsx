@@ -6,6 +6,8 @@ import {
   Search,
   Check,
   AlertCircle,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -30,6 +32,7 @@ import { Product, SalesHistory, Member } from "../../types/types";
 
 export function SalesPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
 
@@ -42,6 +45,7 @@ export function SalesPage() {
 
   // New Product Form State
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [newProduct, setNewProduct] = useState({
     name: "",
     price: "",
@@ -73,19 +77,61 @@ export function SalesPage() {
       return alert("Please fill name and price.");
 
     try {
-      await window.api.products.create({
-        name: newProduct.name,
-        price: parseFloat(newProduct.price),
-        type: newProduct.type,
-        stock: parseInt(newProduct.stock) || 0,
-        is_active: 1,
-      });
-      setIsProductModalOpen(false);
-      setNewProduct({ name: "", price: "", type: "Product", stock: "10" });
+      if (editingProductId) {
+        await window.api.products.update(editingProductId, {
+          name: newProduct.name,
+          price: parseFloat(newProduct.price),
+          type: newProduct.type,
+          stock: parseInt(newProduct.stock) || 0,
+        });
+      } else {
+        await window.api.products.create({
+          name: newProduct.name,
+          price: parseFloat(newProduct.price),
+          type: newProduct.type,
+          stock: parseInt(newProduct.stock) || 0,
+          is_active: 1,
+        });
+      }
+      closeProductModal();
       loadData(); // Refresh list
     } catch (error) {
-      console.error("Failed to create product", error);
-      alert("Failed to create product");
+      console.error("Failed to save product", error);
+      alert("Failed to save product");
+    }
+  };
+
+  const closeProductModal = () => {
+    setIsProductModalOpen(false);
+    setEditingProductId(null);
+    setNewProduct({ name: "", price: "", type: "Product", stock: "10" });
+  };
+
+  const handleEditProduct = (e: React.MouseEvent, product: Product) => {
+    e.stopPropagation(); // prevent adding to cart
+    setEditingProductId(product.id);
+    setNewProduct({
+      name: product.name,
+      price: product.price.toString(),
+      type: product.type,
+      stock: product.stock.toString(),
+    });
+    setIsProductModalOpen(true);
+  };
+
+  const handleDeleteProduct = async (
+    e: React.MouseEvent,
+    productId: number,
+  ) => {
+    e.stopPropagation(); // prevent adding to cart
+    if (!confirm("Are you sure you want to delete this product?")) return;
+
+    try {
+      await window.api.products.delete(productId);
+      loadData();
+    } catch (error) {
+      console.error("Failed to delete product", error);
+      alert("Failed to delete product (It may have associated sales)");
     }
   };
 
@@ -136,14 +182,6 @@ export function SalesPage() {
       // 2. Transact the sales
       await window.api.sales.createBatch(salesBatch);
 
-      // 3. Log a combined transaction to the global ledger
-      await window.api.transactions.create({
-        member_id: actualMemberId || "WALK_IN",
-        amount: total,
-        type: "PRODUCT",
-        payment_method: selectedPayment,
-      });
-
       alert("Sale processed successfully!");
       clearCart();
       loadData(); // Refresh history
@@ -165,26 +203,32 @@ export function SalesPage() {
                 Products & Services
               </h2>
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2">
-                  <Search className="w-5 h-5 text-white" />
+                <div className="flex items-center gap-2 bg-white/20 rounded-lg px-4 py-2 relative z-10 focus-within:ring-2 focus-within:ring-white/50 transition-all">
+                  <Search className="w-5 h-5 text-white pointer-events-none" />
                   <Input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search products..."
-                    className="bg-transparent border-0 text-white placeholder:text-white/70 focus-visible:ring-0"
+                    className="bg-transparent border-0 text-white placeholder:text-white/70 focus-visible:ring-0 min-w-[200px] p-0 h-auto cursor-text relative z-20"
                   />
                 </div>
 
                 <Dialog
                   open={isProductModalOpen}
-                  onOpenChange={setIsProductModalOpen}
+                  onOpenChange={(open) => !open && closeProductModal()}
                 >
-                  <DialogTrigger asChild>
-                    <Button className="bg-blue-600 hover:bg-blue-700">
-                      <Plus className="w-4 h-4 mr-2" /> New Product
-                    </Button>
-                  </DialogTrigger>
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setIsProductModalOpen(true)}
+                  >
+                    <Plus className="w-4 h-4 mr-2" /> New Product
+                  </Button>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Add New Product</DialogTitle>
+                      <DialogTitle>
+                        {editingProductId ? "Edit Product" : "Add New Product"}
+                      </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="space-y-2">
@@ -255,7 +299,7 @@ export function SalesPage() {
                         onClick={handleCreateProduct}
                         className="w-full bg-blue-600 hover:bg-blue-700"
                       >
-                        Create Product
+                        {editingProductId ? "Save Changes" : "Create Product"}
                       </Button>
                     </div>
                   </DialogContent>
@@ -264,42 +308,71 @@ export function SalesPage() {
             </div>
 
             <div className="p-6">
-              {products.length === 0 ? (
+              {products.filter((p) =>
+                p.name.toLowerCase().includes(searchQuery.toLowerCase()),
+              ).length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <ShoppingCart className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                  <p>No products found. Add a new product to get started.</p>
+                  <p>
+                    {searchQuery
+                      ? "No products match your search."
+                      : "No products found. Add a new product to get started."}
+                  </p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-[600px] overflow-y-auto pr-2">
-                  {products.map((product) => (
-                    <div
-                      key={product.id}
-                      onClick={() => addItem(product)}
-                      className="border-2 border-blue-200 rounded-lg p-4 hover:bg-blue-50 cursor-pointer transition-all hover:shadow-lg flex flex-col items-start h-auto"
-                    >
-                      <div className="flex flex-col gap-2">
-                        <Badge
-                          className={
-                            product.type === "Subscription"
-                              ? "bg-blue-600 w-fit"
-                              : product.type === "Package"
-                                ? "bg-green-600 w-fit"
-                                : product.type === "Product"
-                                  ? "bg-purple-600 w-fit"
-                                  : "bg-orange-600 w-fit"
-                          }
-                        >
-                          {product.type}
-                        </Badge>
-                        <h3 className="text-blue-900 font-medium leading-tight">
-                          {product.name}
-                        </h3>
+                  {products
+                    .filter((p) =>
+                      p.name.toLowerCase().includes(searchQuery.toLowerCase()),
+                    )
+                    .map((product) => (
+                      <div
+                        key={product.id}
+                        onClick={() => addItem(product)}
+                        className="border-2 border-blue-200 rounded-lg p-4 hover:bg-blue-50 cursor-pointer transition-all hover:shadow-lg flex flex-col items-start h-auto relative group"
+                      >
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-8 h-8 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                            onClick={(e) => handleEditProduct(e, product)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-8 h-8 text-red-500 hover:bg-red-50 hover:text-red-600"
+                            onClick={(e) => handleDeleteProduct(e, product.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        <div className="flex flex-col gap-2 mt-6">
+                          <Badge
+                            className={
+                              product.type === "Subscription"
+                                ? "bg-blue-600 w-fit"
+                                : product.type === "Package"
+                                  ? "bg-green-600 w-fit"
+                                  : product.type === "Product"
+                                    ? "bg-purple-600 w-fit"
+                                    : "bg-orange-600 w-fit"
+                            }
+                          >
+                            {product.type}
+                          </Badge>
+                          <h3 className="text-blue-900 font-medium leading-tight">
+                            {product.name}
+                          </h3>
+                        </div>
+                        <p className="text-xl text-blue-600 font-semibold mt-4">
+                          {product.price.toLocaleString()} DZD
+                        </p>
                       </div>
-                      <p className="text-xl text-blue-600 font-semibold mt-4">
-                        {product.price.toLocaleString()} DZD
-                      </p>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </div>

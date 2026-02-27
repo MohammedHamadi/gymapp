@@ -32,7 +32,7 @@ export const transactionRepository = {
     const stmt = db.prepare(`
         SELECT t.*, m.first_name, m.last_name 
         FROM transactions t
-        JOIN members m ON t.member_id = m.id
+        LEFT JOIN members m ON t.member_id = m.id
         ORDER BY t.transaction_date DESC
     `);
     return stmt.all();
