@@ -7,6 +7,8 @@ import { setupPlanHandlers } from "./handlers/planHandlers.js";
 import { setupSubscriptionHandlers } from "./handlers/subscriptionHandlers.js";
 import { setupAccessLogHandlers } from "./handlers/accessLogHandlers.js";
 import { setupTransactionHandlers } from "./handlers/transactionHandlers.js";
+import { setupProductHandlers } from "./handlers/productHandlers.js";
+import { setupSalesHistoryHandlers } from "./handlers/salesHistoryHandlers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,6 +38,8 @@ app.whenReady().then(() => {
   setupSubscriptionHandlers();
   setupAccessLogHandlers();
   setupTransactionHandlers();
+  setupProductHandlers();
+  setupSalesHistoryHandlers();
   createWindow();
 
   app.on("activate", function () {

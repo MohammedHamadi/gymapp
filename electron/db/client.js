@@ -21,18 +21,3 @@ const schema = fs.readFileSync(schemaPath, "utf8");
 db.exec(schema);
 
 export default db;
-
-try {
-  db.exec(
-    "ALTER TABLE access_logs ADD COLUMN subscription_id INTEGER REFERENCES subscriptions(id)",
-  );
-} catch {
-  // Column already exists, ignore
-}
-
-// Add photo column to members if not present
-try {
-  db.exec("ALTER TABLE members ADD COLUMN photo BLOB");
-} catch {
-  // Column already exists, ignore
-}
