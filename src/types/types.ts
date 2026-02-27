@@ -51,3 +51,23 @@ export interface Transaction {
   type: "SUBSCRIPTION" | "PRODUCT" | "REFUND";
   payment_method: string;
 }
+
+export interface Product {
+  id: number;
+  name: string;
+  price: number;
+  type: string;
+  stock: number;
+  is_active: number; // SQLite BOOLEAN (0 or 1)
+  created_at: string;
+}
+
+export interface SalesHistory {
+  id: number;
+  product_id: number;
+  member_id: string | null;
+  quantity: number;
+  total_price: number;
+  payment_method: string | null;
+  sale_date: string;
+}

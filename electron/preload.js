@@ -59,4 +59,17 @@ contextBridge.exposeInMainWorld("api", {
       ipcRenderer.invoke("transactions:getDailyTotal", date),
     getAll: () => ipcRenderer.invoke("transactions:getAll"),
   },
+  products: {
+    getAll: () => ipcRenderer.invoke("products:getAll"),
+    getById: (id) => ipcRenderer.invoke("products:getById", id),
+    create: (data) => ipcRenderer.invoke("products:create", data),
+    update: (id, data) => ipcRenderer.invoke("products:update", id, data),
+    delete: (id) => ipcRenderer.invoke("products:delete", id),
+  },
+  sales: {
+    create: (data) => ipcRenderer.invoke("sales:create", data),
+    createBatch: (data) => ipcRenderer.invoke("sales:createBatch", data),
+    getAll: () => ipcRenderer.invoke("sales:getAll"),
+    getRecent: (limit) => ipcRenderer.invoke("sales:getRecent", limit),
+  },
 });
