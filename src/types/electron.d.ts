@@ -52,6 +52,19 @@ export interface ElectronApi {
     getDailyTotal: (date: string) => Promise<{ total: number; count: number }>;
     getAll: () => Promise<Transaction[]>;
   };
+  products: {
+    getAll: () => Promise<any[]>;
+    getById: (id: number) => Promise<any>;
+    create: (product: any) => Promise<any>;
+    update: (id: number, product: any) => Promise<any>;
+    delete: (id: number) => Promise<any>;
+  };
+  sales: {
+    create: (sale: any) => Promise<any>;
+    createBatch: (sales: any[]) => Promise<any[]>;
+    getAll: () => Promise<any[]>;
+    getRecent: (limit: number) => Promise<any[]>;
+  };
 }
 
 declare global {
