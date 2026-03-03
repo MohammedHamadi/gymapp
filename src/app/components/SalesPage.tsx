@@ -35,6 +35,9 @@ export function SalesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSales, setRecentSales] = useState<any[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+   
+const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+const [lastSaleData, setLastSaleData] = useState<any>(null);
 
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -53,10 +56,13 @@ export function SalesPage() {
     stock: "10",
   });
 
-  const loadData = async () => {
+ const loadData = async () => {
     try {
       const prods = await window.api.products.getAll();
-      setProducts(prods);
+      
+      // ONLY keep products that are active (is_active is 1)
+     const activeProducts = prods.filter((p: Product) => p.is_active !== 0);
+      setProducts(activeProducts);
 
       const sales = await window.api.sales.getRecent(10);
       setRecentSales(sales);
@@ -64,13 +70,33 @@ export function SalesPage() {
       const mems = await window.api.members.getAll();
       setMembers(mems);
     } catch (error) {
+      // This is the catch block that was missing!
       console.error("Failed to load sales data", error);
     }
   };
-
+  // 1. Load data when the page first opens
   useEffect(() => {
     loadData();
-  }, []);
+
+    // Backup timer just in case the database takes a split second to wake up
+    const backupTimer = setTimeout(() => {
+      loadData();
+    }, 500);
+
+    return () => clearTimeout(backupTimer);
+  }, []); // The empty [] means "only run this once when the page loads"
+
+  // // 2. Auto-print the receipt when the modal opens
+  // useEffect(() => {
+  //   if (isReceiptModalOpen && lastSaleData) {
+  //     // Wait 300ms to let the modal fully draw on the screen, then print
+  //     const printTimer = setTimeout(() => {
+  //       window.print();
+  //     }, 300);
+      
+  //     return () => clearTimeout(printTimer);
+  //   }
+  // }, [isReceiptModalOpen, lastSaleData]);
 
   const handleCreateProduct = async () => {
     if (!newProduct.name || !newProduct.price)
@@ -121,28 +147,50 @@ export function SalesPage() {
 
   const handleDeleteProduct = async (
     e: React.MouseEvent,
-    productId: number,
+    product: Product, // <-- Notice I changed productId to the whole product object
   ) => {
-    e.stopPropagation(); // prevent adding to cart
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    e.stopPropagation(); 
+    if (!confirm(`Are you sure you want to remove ${product.name}?`)) return;
 
     try {
-      await window.api.products.delete(productId);
+      // Instead of hard deleting, we "soft delete" by updating is_active to 0
+      await window.api.products.update(product.id, {
+        name: product.name,
+        price: product.price,
+        type: product.type,
+        stock: product.stock,
+        is_active: 0, // <--- This hides the product!
+      });
+      
       loadData();
     } catch (error) {
-      console.error("Failed to delete product", error);
-      alert("Failed to delete product (It may have associated sales)");
+      console.error("Failed to archive product", error);
+      alert("Failed to remove product.");
     }
   };
 
-  const addItem = (product: Product) => {
-    setSelectedItems([...selectedItems, { ...product, quantity: 1 }]);
+ const addItem = (product: Product) => {
+    // Check if the item is already in the cart
+    const existingIndex = selectedItems.findIndex((item) => item.id === product.id);
+
+    if (existingIndex >= 0) {
+      // It exists! Just increase the quantity by 1
+      const newItems = [...selectedItems];
+      newItems[existingIndex].quantity += 1;
+      setSelectedItems(newItems);
+    } else {
+      // It's a new item, add it with quantity 1
+      setSelectedItems([...selectedItems, { ...product, quantity: 1 }]);
+    }
+    
+    // Always add the single item's price to the grand total
     setTotal(total + product.price);
   };
 
   const removeItem = (index: number) => {
     const item = selectedItems[index];
-    setTotal(total - item.price);
+    // Subtract the (price × quantity) so the total doesn't break
+    setTotal(total - (item.price * item.quantity));
     setSelectedItems(selectedItems.filter((_, i) => i !== index));
   };
 
@@ -158,13 +206,7 @@ export function SalesPage() {
       return;
     }
 
-    if (
-      !confirm(
-        `Process sale for ${total.toLocaleString()} DZD via ${selectedPayment}?`,
-      )
-    ) {
-      return;
-    }
+    
 
     try {
       const actualMemberId =
@@ -182,7 +224,19 @@ export function SalesPage() {
       // 2. Transact the sales
       await window.api.sales.createBatch(salesBatch);
 
-      alert("Sale processed successfully!");
+     setLastSaleData({
+  items: [...selectedItems],
+  total: total,
+  payment: selectedPayment,
+  date: new Date(),
+  // Try to find the actual member's name, otherwise default to "Walk-in"
+  memberName: actualMemberId 
+    ? members.find(m => m.id === actualMemberId)?.first_name + " " + members.find(m => m.id === actualMemberId)?.last_name 
+    : "Walk-in"
+});
+
+// 2. Open the receipt popup
+setIsReceiptModalOpen(true);
       clearCart();
       loadData(); // Refresh history
     } catch (error) {
@@ -190,9 +244,68 @@ export function SalesPage() {
       alert("Failed to process sale. Check console for details.");
     }
   };
-
+    const handlePrintReceipt = () => {
+  window.print();
+  setIsReceiptModalOpen(false); // Optional: close the modal after opening the print dialog
+};
   return (
     <div className="p-6">
+      {/* --- RECEIPT MODAL --- */}
+<Dialog open={isReceiptModalOpen} onOpenChange={setIsReceiptModalOpen}>
+  <DialogContent className="sm:max-w-md">
+    <DialogHeader>
+      <DialogTitle className="text-center text-2xl font-bold border-b pb-4">
+        GymApp Receipt
+      </DialogTitle>
+    </DialogHeader>
+    
+    {/* Only render this if we actually have sale data saved */}
+    {lastSaleData && (
+      <div id="printable-receipt" className="space-y-4 py-4 text-black">
+        <div className="flex justify-between text-sm text-gray-500">
+          <span>Date: {lastSaleData.date.toLocaleString()}</span>
+          <span>Customer: {lastSaleData.memberName}</span>
+        </div>
+        
+        {/* Map through the saved items */}
+        <div className="border-t border-b border-gray-200 py-4 space-y-2">
+          {lastSaleData.items.map((item: any, i: number) => (
+            <div key={i} className="flex justify-between">
+              <span>{item.name} x{item.quantity}</span>
+              <span>{item.price.toLocaleString()} DZD</span>
+            </div>
+          ))}
+        </div>
+        
+        <div className="flex justify-between font-bold text-lg">
+          <span>Total:</span>
+          <span>{lastSaleData.total.toLocaleString()} DZD</span>
+        </div>
+        <div className="text-right text-sm text-gray-500">
+          Paid via: {lastSaleData.payment}
+        </div>
+      </div>
+    )}
+
+    {/* Buttons: Print or Close */}
+    {/* Buttons: Print or Close */}
+    <div className="flex flex-col gap-3 mt-6">
+      <Button 
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white hide-on-print"
+        onClick={handlePrintReceipt}
+      >
+        Print Receipt
+      </Button>
+      <Button 
+        variant="outline" 
+        className="w-full hide-on-print"
+        onClick={() => setIsReceiptModalOpen(false)}
+      >
+        No Thanks
+      </Button>
+    </div>
+  </DialogContent>
+</Dialog>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Panel - Products */}
         <div className="lg:col-span-2 space-y-6">
@@ -344,7 +457,7 @@ export function SalesPage() {
                             variant="ghost"
                             size="icon"
                             className="w-8 h-8 text-red-500 hover:bg-red-50 hover:text-red-600"
-                            onClick={(e) => handleDeleteProduct(e, product.id)}
+                            onClick={(e) => handleDeleteProduct(e, product)}
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -488,10 +601,10 @@ export function SalesPage() {
                     <SelectValue placeholder="Select member (Walk-in default)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="walk_in">Walk-in Customer</SelectItem>
+                    <SelectItem value="walk_in">Customer</SelectItem>
                     {members.map((m) => (
                       <SelectItem key={m.id} value={m.id}>
-                        {m.first_name} {m.last_name} ({m.id})
+                        {m.firstName} {m.lastName} 
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -590,8 +703,8 @@ export function SalesPage() {
                 {/* Action Buttons */}
                 <div className="space-y-3">
                   <Button
-                    onClick={processSale}
-                    disabled={selectedItems.length === 0}
+                     onClick={processSale}
+                     disabled={selectedItems.length === 0}
                     className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg font-semibold shadow-lg transition-transform active:scale-[0.98] disabled:opacity-50"
                   >
                     <DollarSign className="w-6 h-6 mr-2" />

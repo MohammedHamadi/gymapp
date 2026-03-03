@@ -35,18 +35,18 @@ const navigationItems = [
     action: "access",
   },
   { icon: DollarSign, label: "Sales", color: "bg-gray-600", action: "sales" },
-  {
-    icon: Settings,
-    label: "Settings",
-    color: "bg-orange-600",
-    action: "settings",
-  },
-  {
-    icon: FileText,
-    label: "Reports",
-    color: "bg-purple-600",
-    action: "reports",
-  },
+  //  {
+  //    icon: Settings,
+  //    label: "Settings",
+  //    color: "bg-orange-600",
+  //    action: "settings",
+  //  },
+  // //  {
+  //    icon: FileText,
+  //   label: "Reports",
+  //    color: "bg-purple-600",
+  //    action: "reports",
+  // },
 
   { icon: Calendar, label: "Plans", color: "bg-cyan-600", action: "plans" },
   {
