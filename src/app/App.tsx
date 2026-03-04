@@ -21,6 +21,21 @@ export default function App() {
   const [cardData, setCardData] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [showRenewModal, setShowRenewModal] = useState(false);
+ // --- CUSTOM ALERT OVERRIDE ---
+  // Replaces the broken native Electron alert with a smooth, non-blocking popup
+  useEffect(() => {
+    window.alert = (msg) => {
+      const toast = document.createElement('div');
+      toast.className = "fixed bottom-6 right-6 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-2xl z-[9999] transition-all font-medium";
+      toast.innerText = msg;
+      document.body.appendChild(toast);
+      
+      // Remove it automatically after 3 seconds
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    };
+  }, []);
   useEffect(() => {
     const fetchMembers = async () => {
       try {
@@ -103,23 +118,43 @@ export default function App() {
   const handleSaveMember = async (data: any) => {
     try {
       if (data.member.id) {
-        // Update existing member (currently only member details supported)
+        // 1. Update existing member details
         await window.api.members.update(data.member.id, {
           ...data.member,
           photoUrl: null, // Ensure parameter exists for SQL
         });
+
+        // 2. THE FIX: Update the subscription details if they were changed!
+        if (data.subscription && selectedMember?.subscription?.id) {
+          await window.api.subscriptions.update(selectedMember.subscription.id, {
+            memberId: data.member.id,
+            planId: data.subscription.planId,
+            startDate: data.subscription.startDate,
+            endDate: data.subscription.endDate,
+            remainingSessions: data.subscription.remainingSessions,
+            pricePaid: data.subscription.pricePaid,
+            status: selectedMember.subscription.status, // Keep current status
+            autoRenew: selectedMember.subscription.autoRenew || 0
+          });
+        } 
+        // 3. If they didn't have a plan before, but we added one during the edit
+        else if (data.subscription && !selectedMember?.subscription) {
+          await window.api.subscriptions.create({
+            memberId: data.member.id,
+            planId: data.subscription.planId,
+            startDate: data.subscription.startDate,
+            endDate: data.subscription.endDate,
+            remainingSessions: data.subscription.remainingSessions,
+            status: "ACTIVE",
+            pricePaid: data.subscription.pricePaid,
+            autoRenew: 0,
+          });
+        }
+
       } else {
-        // Create new member
-        // 1. Generate IDs client-side or let backend handle it.
-        // The form currently does not generate IDs, so we rely on backend or generate here.
-        // Let's generate a simple ID here or modify repository to auto-id.
-        // Looking at Schema, ID is TEXT.
-        // Looking at MemberForm, it was generating ID locally before my change?
-        // Ah, I removed the local ID generation in MemberForm.
-        // Ideally, backend should handle ID generation or we do it here.
-        // Let's generate one here to valid schema.
+        // Create new member (This part stays exactly the same)
         const memberId = `GYM${Date.now().toString().slice(-8)}`;
-        const qrCode = memberId; // QR Code same as ID
+        const qrCode = memberId;
 
         const newMember = {
           ...data.member,
@@ -130,15 +165,15 @@ export default function App() {
 
         await window.api.members.create(newMember);
 
-        // 2. Create Subscription if provided
+        // Create Subscription if provided
         if (data.subscription) {
           const newSubscription = {
             memberId: memberId,
             planId: data.subscription.planId,
             startDate: data.subscription.startDate,
-            endDate: data.subscription.endDate, // CAN BE NULL
+            endDate: data.subscription.endDate,
             remainingSessions: data.subscription.remainingSessions,
-            status: "ACTIVE" as const,
+            status: "ACTIVE",
             pricePaid: data.subscription.pricePaid,
             autoRenew: 0,
           };
@@ -146,18 +181,19 @@ export default function App() {
         }
       }
 
-      // Refresh list
+      // Refresh list so the new session count instantly appears in the table
       const members = await window.api.members.getAll();
       setMembers(members);
 
-      alert(
-        data.member.id ? "Member updated!" : "Member and Subscription created!",
-      );
+      // Give the UI 100ms to unlock the screen before showing the alert
+      setTimeout(() => {
+        alert(data.member.id ? "Member updated!" : "Member and Subscription created!");
+      }, 100);
 
       // Close/Clear
       setSelectedMember(null);
       setIsEditing(false);
-      // setCardData(newMember) // If we want to show card immediately
+
     } catch (error) {
       console.error("Error saving member:", error);
       alert("Failed to save member.");
@@ -177,22 +213,22 @@ export default function App() {
     }
   };
 
-  const handleDelete = async () => {
+ const handleDelete = async () => {
     if (selectedMember) {
       if (
-        confirm(
-          `Are you sure you want to delete ${selectedMember.firstName} ${selectedMember.lastName}?`,
-        )
+        confirm(`Are you sure you want to delete ${selectedMember.firstName} ${selectedMember.lastName}?`)
       ) {
         try {
           await window.api.members.delete(selectedMember.id);
           const members = await window.api.members.getAll();
           setMembers(members);
           setSelectedMember(null);
-          alert("Member deleted successfully!");
+          
+          // Delayed Alert
+          setTimeout(() => alert("Member deleted successfully!"), 100);
         } catch (e) {
           console.error(e);
-          alert("Failed to delete member");
+          setTimeout(() => alert("Failed to delete member"), 100);
         }
       }
     } else {
@@ -319,14 +355,15 @@ export default function App() {
             onViewHistory={handleViewHistory}
             onToggleStatus={handleToggleStatus}
             onRenew={handleRenew}
-            onRefresh={async () => {
+           onRefresh={async () => {
               try {
                 const members = await window.api.members.getAll();
                 setMembers(members);
-                alert("Refreshed member list!");
+                // Delayed Alert
+                setTimeout(() => alert("Refreshed member list!"), 100);
               } catch (error) {
                 console.error("Refresh failed:", error);
-                alert("Failed to refresh");
+                setTimeout(() => alert("Failed to refresh"), 100);
               }
             }}
           />
