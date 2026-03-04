@@ -1,6 +1,7 @@
 import Barcode from "react-barcode";
 import { X } from "lucide-react";
 import { Button } from "./ui/button";
+
 // Placeholder if no photo is available
 const defaultProfileImage =
   "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop";
@@ -59,15 +60,15 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
           </button>
         </div>
 
-        {/* Member Card */}
+        {/* --- MODIFIED MEMBER CARD --- */}
         <div
           id="memberCard"
-          className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-8 shadow-xl text-white mb-6"
+          className="bg-white rounded-2xl p-8 shadow-xl border-2 border-gray-200 text-gray-900 mb-6"
         >
           {/* Header with Logo */}
-          <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-white/30">
+          <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-gray-100">
             <div className="flex items-center gap-3">
-              <div className="w-16 h-16 bg-white rounded-full overflow-hidden">
+              <div className="w-16 h-16 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
                 <img
                   src={gymLogoUrl}
                   alt="Gym Logo"
@@ -75,8 +76,8 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
                 />
               </div>
               <div>
-                <h3 className="text-xl font-bold">FITNESS GYM</h3>
-                <p className="text-sm text-blue-100">Member Card</p>
+                <h3 className="text-xl font-bold text-blue-900">CROSSTENIX</h3>
+                <p className="text-sm text-gray-500 font-medium">Member Card</p>
               </div>
             </div>
           </div>
@@ -85,7 +86,7 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
           <div className="grid grid-cols-3 gap-6">
             {/* Photo */}
             <div className="col-span-1">
-              <div className="w-32 h-32 bg-white rounded-lg overflow-hidden border-4 border-white/50">
+              <div className="w-32 h-32 bg-gray-50 rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm">
                 <img
                   src={getProfileImage()}
                   alt="Member"
@@ -97,25 +98,25 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
             {/* Details */}
             <div className="col-span-2 space-y-3">
               <div>
-                <p className="text-xs text-blue-100 uppercase">Full Name</p>
-                <p className="text-xl font-bold">
+                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Full Name</p>
+                <p className="text-xl font-bold text-blue-900">
                   {memberData.firstName} {memberData.lastName}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-blue-100 uppercase">Phone Number</p>
-                <p className="font-semibold">{memberData.phone}</p>
+                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Phone Number</p>
+                <p className="font-semibold text-gray-800">{memberData.phone}</p>
               </div>
               <div>
-                <p className="text-xs text-blue-100 uppercase">Valid From</p>
-                <p className="font-semibold">{memberData.startDate}</p>
+                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Valid From</p>
+                <p className="font-semibold text-gray-800">{memberData.startDate}</p>
               </div>
             </div>
           </div>
 
-          {/* QR Code Section */}
-          <div className="mt-6 pt-4 border-t-2 border-white/30 flex items-center justify-between">
-            <div className="bg-white p-2 rounded-lg">
+          {/* QR Code Section (Dark Box Removed) */}
+          <div className="mt-6 pt-4 border-t-2 border-gray-100 flex items-center justify-between">
+            <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
               <Barcode
                 value={memberData.id}
                 format="CODE128"
@@ -125,9 +126,9 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
                 displayValue={false}
               />
             </div>
-            <div className="w-20 h-20 bg-white rounded-lg flex items-center justify-center">
-              <div className="w-16 h-16 bg-gray-800 rounded"></div>
-            </div>
+            
+            {/* The dark square code that used to be right here is completely gone! */}
+
           </div>
         </div>
 

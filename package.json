@@ -6,6 +6,7 @@
   "main": "electron/main.js",
   "scripts": {
     "build": "vite build",
+    "dist": "npm run build && electron-builder",
     "dev": "vite",
     "electron": "electron .",
     "electron:dev": "concurrently -k \"npm run dev\" \"wait-on tcp:5173 && electron .\"",
@@ -75,6 +76,7 @@
     "@vitejs/plugin-react": "4.7.0",
     "concurrently": "^9.2.1",
     "electron": "^40.0.0",
+    "electron-builder": "^26.8.1",
     "tailwindcss": "4.1.12",
     "vite": "6.3.5",
     "wait-on": "^9.0.3"
@@ -94,6 +96,22 @@
   "pnpm": {
     "overrides": {
       "vite": "6.3.5"
+    }
+  },
+  "build": {
+    "appId": "com.gymapp.pos",
+    "productName": "GymApp",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
     }
   }
 }

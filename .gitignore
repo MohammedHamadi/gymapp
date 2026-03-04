@@ -66,4 +66,19 @@ Thumbs.db
 
 # business logic
 business_logic.md
+# Database
+gym.db
+gym_backup.db
 
+# Electron Build Folders
+release/
+dist/
+
+# Database
+*.db
+*.sqlite
+
+# Electron Build Folders
+release/
+dist/
+out/
