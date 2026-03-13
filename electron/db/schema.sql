@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS members (
     email TEXT,
     qr_code TEXT UNIQUE NOT NULL,
     photo_url TEXT,
-    photo BLOB,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -43,13 +42,11 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 CREATE TABLE IF NOT EXISTS access_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     member_id TEXT NOT NULL,
-    subscription_id INTEGER,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     type TEXT CHECK(type IN ('CHECK_IN', 'CHECK_OUT')) NOT NULL,
     status TEXT CHECK(status IN ('GRANTED', 'DENIED')) NOT NULL,
     denial_reason TEXT,
-    FOREIGN KEY (member_id) REFERENCES members(id),
-    FOREIGN KEY (subscription_id) REFERENCES subscriptions(id)
+    FOREIGN KEY (member_id) REFERENCES members(id)
 );
 
 -- Transactions Table
@@ -63,28 +60,4 @@ CREATE TABLE IF NOT EXISTS transactions (
     payment_method TEXT DEFAULT 'CASH',
     FOREIGN KEY (member_id) REFERENCES members(id),
     FOREIGN KEY (subscription_id) REFERENCES subscriptions(id)
-);
-
--- Products Table
-CREATE TABLE IF NOT EXISTS products (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    price DECIMAL(10, 2) NOT NULL,
-    type TEXT NOT NULL,
-    stock INTEGER DEFAULT 0,
-    is_active BOOLEAN DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- Sales History Table
-CREATE TABLE IF NOT EXISTS sales_history (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id INTEGER NOT NULL,
-    member_id TEXT,
-    quantity INTEGER DEFAULT 1,
-    total_price DECIMAL(10, 2) NOT NULL,
-    payment_method TEXT,
-    sale_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(id),
-    FOREIGN KEY (member_id) REFERENCES members(id)
 );

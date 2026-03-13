@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 console.log("✅ PRELOAD LOADED");
 
 contextBridge.exposeInMainWorld("api", {
+   printReceipt: (html) => ipcRenderer.invoke("print-receipt", html),
   // Generic invoke wrapper for flexibility
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
 

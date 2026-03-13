@@ -47,6 +47,7 @@ export const accessLogRepository = {
           SELECT MAX(id) FROM access_logs WHERE member_id = m.id
       )
       AND al.type = 'CHECK_IN'
+      AND al.status = 'GRANTED'     /* <--- ADD THIS EXACT LINE HERE */
       AND date(al.timestamp) = date('now')
     `);
     return stmt.all();
