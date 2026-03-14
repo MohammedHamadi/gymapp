@@ -73,4 +73,7 @@ contextBridge.exposeInMainWorld("api", {
     getAll: () => ipcRenderer.invoke("sales:getAll"),
     getRecent: (limit) => ipcRenderer.invoke("sales:getRecent", limit),
   },
+  system: {
+    getMachineId: () => ipcRenderer.invoke("system:getMachineId"),
+  }
 });

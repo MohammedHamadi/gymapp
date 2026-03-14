@@ -13,6 +13,10 @@ import { AccessControlPage } from "./components/AccessControlPage";
 import { SubscriptionsPage } from "./components/SubscriptionsPage";
 import { RenewSubscriptionModal } from "./components/RenewSubscriptionModal";
 
+// --- SECURITY CHANGE 1: IMPORT THE LOCK SCREEN ---
+import { LockScreen } from "./components/lockScreen";
+// -------------------------------------------------
+
 export default function App() {
   const [currentPage, setCurrentPage] = useState("subscribers");
   const [selectedMember, setSelectedMember] = useState<any>(null);
@@ -21,7 +25,38 @@ export default function App() {
   const [cardData, setCardData] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [showRenewModal, setShowRenewModal] = useState(false);
- // --- CUSTOM ALERT OVERRIDE ---
+
+  // --- SECURITY CHANGE 2: ADD ACTIVATION STATE ---
+  const [isActivated, setIsActivated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkActivation = async () => {
+      try {
+        const id = await window.api.system.getMachineId();
+        const savedKey = localStorage.getItem("gym_activation_key");
+        
+        // The Secret Formula
+        const secretString = id + "BAKI-GYM-SECRET";
+        const msgUint8 = new TextEncoder().encode(secretString);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        const expectedKey = hashHex.substring(0, 12).toUpperCase();
+
+        if (savedKey === expectedKey) {
+          setIsActivated(true); // Let them in
+        } else {
+          setIsActivated(false); // Lock them out
+        }
+      } catch (err) {
+        setIsActivated(false);
+      }
+    };
+    checkActivation();
+  }, []);
+  // -----------------------------------------------
+
+  // --- CUSTOM ALERT OVERRIDE ---
   // Replaces the broken native Electron alert with a smooth, non-blocking popup
   useEffect(() => {
     window.alert = (msg) => {
@@ -36,6 +71,7 @@ export default function App() {
       }, 3000);
     };
   }, []);
+
   useEffect(() => {
     const fetchMembers = async () => {
       try {
@@ -47,38 +83,6 @@ export default function App() {
     };
     fetchMembers();
   }, []);
-  /*const [members, setMembers] = useState<any[]>([
-    {
-      id: 'GYM00001234',
-      qrCode: 'QR1234567890',
-      firstName: 'Ahmed',
-      lastName: 'BEN AKTUL',
-      phone: '+213 555 123 456',
-      gender: 'M',
-      startDate: '2023-12-06',
-      endDate: '2025-12-06',
-      subscriptionType: 'Sessions',
-      price: '45,000',
-      sessionsRemaining: 104,
-      totalSessions: 120,
-      status: 'Active'
-    },
-    {
-      id: 'GYM00005678',
-      qrCode: 'QR5678901234',
-      firstName: 'Ayoub',
-      lastName: 'HADDAD',
-      phone: '+213 555 234 567',
-      gender: 'M',
-      startDate: '2023-04-02',
-      endDate: '2024-04-02',
-      subscriptionType: 'Sessions',
-      price: '28,000',
-      sessionsRemaining: 16,
-      totalSessions: 60,
-      status: 'Active'
-    },
-  ]);*/
 
   const handleNavigate = (page: string) => {
     switch (page) {
@@ -213,7 +217,7 @@ export default function App() {
     }
   };
 
- const handleDelete = async () => {
+  const handleDelete = async () => {
     if (selectedMember) {
       if (
         confirm(`Are you sure you want to delete ${selectedMember.firstName} ${selectedMember.lastName}?`)
@@ -320,6 +324,14 @@ export default function App() {
     }
   };
 
+  // --- SECURITY CHANGE 3: THE GATEKEEPER INTERCEPTS THE RENDER ---
+  if (isActivated === null) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading Security Module...</div>;
+
+  if (isActivated === false) {
+    return <LockScreen onUnlock={() => setIsActivated(true)} />;
+  }
+  // ---------------------------------------------------------------
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
       {/* Top Navigation */}
@@ -339,11 +351,6 @@ export default function App() {
                 onCancel={() => setIsEditing(false)}
               />
             </div>
-
-            {/* Right Panel - Member Status (1/3 width)
-            <div className="lg:col-span-1">
-              <MemberStatus selectedMember={selectedMember} />
-            </div> */}
           </div>
 
           {/* Action Buttons */}
@@ -379,13 +386,7 @@ export default function App() {
           />
         </div>
       )}
-
-      {/* Settings Page */}
-      {currentPage === "settings" && <SettingsPage />}
-
-      {/* Reports Page */}
-      {currentPage === "reports" && <ReportsPage />}
-
+{/* 
       {/* Plans Page */}
       {currentPage === "plans" && <PlansPage />}
 
@@ -418,10 +419,8 @@ export default function App() {
         member={selectedMember}
         currentPlanId={
           selectedMember?.subscription?.planName
-            ? undefined // We don't have the ID directly easily available from selectedMember.subscription currently effectively.
-            : // Actually we can try to pass it if we had it.
-              // For now let user select.
-              undefined
+            ? undefined 
+            : undefined
         }
       />
     </div>

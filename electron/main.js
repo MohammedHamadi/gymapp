@@ -1,7 +1,9 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron"; 
 import path from "path";
 import { fileURLToPath } from "url";
 import db from "./db/client.js";
+import pkg from 'node-machine-id';
+const { machineIdSync } = pkg;
 import { setupMemberHandlers } from "./handlers/memberHandlers.js";
 import { setupPlanHandlers } from "./handlers/planHandlers.js";
 import { setupSubscriptionHandlers } from "./handlers/subscriptionHandlers.js";
@@ -40,6 +42,21 @@ app.whenReady().then(() => {
   setupTransactionHandlers();
   setupProductHandlers();
   setupSalesHistoryHandlers();
+
+  // ADD THIS CONSOLE LOG RIGHT HERE:
+  console.log("🚀 REGISTERING HARDWARE LOCK...");
+
+  ipcMain.handle("system:getMachineId", () => {
+    try {
+      const id = machineIdSync(); 
+      return id;
+    } catch (error) {
+      console.error("Failed to get machine ID:", error);
+      return null;
+    }
+  });
+  
+
   createWindow();
 
   app.on("activate", function () {
