@@ -11,6 +11,7 @@ import { setupAccessLogHandlers } from "./handlers/accessLogHandlers.js";
 import { setupTransactionHandlers } from "./handlers/transactionHandlers.js";
 import { setupProductHandlers } from "./handlers/productHandlers.js";
 import { setupSalesHistoryHandlers } from "./handlers/salesHistoryHandlers.js";
+import { setupEquipmentHandlers } from "./handlers/equipmentHandlers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,6 +43,7 @@ app.whenReady().then(() => {
   setupTransactionHandlers();
   setupProductHandlers();
   setupSalesHistoryHandlers();
+  setupEquipmentHandlers();
 
   // ADD THIS CONSOLE LOG RIGHT HERE:
   console.log("🚀 REGISTERING HARDWARE LOCK...");

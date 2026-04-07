@@ -61,3 +61,17 @@ CREATE TABLE IF NOT EXISTS transactions (
     FOREIGN KEY (member_id) REFERENCES members(id),
     FOREIGN KEY (subscription_id) REFERENCES subscriptions(id)
 );
+
+-- Equipment Table
+CREATE TABLE IF NOT EXISTS equipment (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    category TEXT CHECK(category IN ('CARDIO', 'STRENGTH', 'FLEXIBILITY', 'FREE_WEIGHTS', 'OTHER')) NOT NULL,
+    status TEXT CHECK(status IN ('AVAILABLE', 'IN_USE', 'MAINTENANCE', 'OUT_OF_ORDER')) DEFAULT 'AVAILABLE',
+    condition TEXT CHECK(condition IN ('NEW', 'GOOD', 'FAIR', 'POOR')) DEFAULT 'NEW',
+    quantity INTEGER DEFAULT 1,
+    purchase_date TEXT,
+    notes TEXT,
+    image_path TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

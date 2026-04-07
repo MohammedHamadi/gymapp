@@ -8,6 +8,7 @@ import {
   Calendar,
   RefreshCw,
   BookOpen,
+  Dumbbell,
   X,
 } from "lucide-react";
 
@@ -50,10 +51,10 @@ const navigationItems = [
 
   { icon: Calendar, label: "Plans", color: "bg-cyan-600", action: "plans" },
   {
-    icon: RefreshCw,
-    label: "Refresh",
-    color: "bg-indigo-600",
-    action: "refresh",
+    icon: Dumbbell,
+    label: "Equipment",
+    color: "bg-orange-600",
+    action: "equipment",
   },
 
 ];

@@ -73,6 +73,14 @@ contextBridge.exposeInMainWorld("api", {
     getAll: () => ipcRenderer.invoke("sales:getAll"),
     getRecent: (limit) => ipcRenderer.invoke("sales:getRecent", limit),
   },
+  equipment: {
+    getAll: () => ipcRenderer.invoke("equipment:getAll"),
+    getById: (id) => ipcRenderer.invoke("equipment:getById", id),
+    create: (data) => ipcRenderer.invoke("equipment:create", data),
+    update: (id, data) => ipcRenderer.invoke("equipment:update", id, data),
+    delete: (id) => ipcRenderer.invoke("equipment:delete", id),
+    pickImage: () => ipcRenderer.invoke("equipment:pickImage"),
+  },
   system: {
     getMachineId: () => ipcRenderer.invoke("system:getMachineId"),
   }

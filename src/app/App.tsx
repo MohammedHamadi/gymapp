@@ -11,6 +11,7 @@ import { PlansPage } from "./components/PlansPage";
 import { SalesPage } from "./components/SalesPage";
 import { AccessControlPage } from "./components/AccessControlPage";
 import { SubscriptionsPage } from "./components/SubscriptionsPage";
+import { EquipmentPage } from "./components/EquipmentPage";
 import { RenewSubscriptionModal } from "./components/RenewSubscriptionModal";
 
 // --- SECURITY CHANGE 1: IMPORT THE LOCK SCREEN ---
@@ -34,7 +35,7 @@ export default function App() {
       try {
         const id = await window.api.system.getMachineId();
         const savedKey = localStorage.getItem("gym_activation_key");
-        
+
         // The Secret Formula
         const secretString = id + "BAKI-GYM-SECRET";
         const msgUint8 = new TextEncoder().encode(secretString);
@@ -64,11 +65,28 @@ export default function App() {
       toast.className = "fixed bottom-6 right-6 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-2xl z-[9999] transition-all font-medium";
       toast.innerText = msg;
       document.body.appendChild(toast);
-      
+
       // Remove it automatically after 3 seconds
       setTimeout(() => {
         toast.remove();
       }, 3000);
+    };
+
+    // --- CUSTOM CONFIRM FIX ---
+    // Native Electron confirm() steals keyboard focus from the webview.
+    // Text inputs stop accepting keyboard input (buttons still work via mouse).
+    // This wrapper calls the native confirm, then forcefully restores focus.
+    const nativeConfirm = window.confirm;
+    window.confirm = (msg?: string): boolean => {
+      const result = nativeConfirm.call(window, msg ?? "");
+      // Restore keyboard focus to the webview after native dialog closes
+      setTimeout(() => {
+        window.focus();
+        document.body.focus();
+        // Dispatch a synthetic click to fully re-engage keyboard input
+        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      }, 50);
+      return result;
     };
   }, []);
 
@@ -107,6 +125,9 @@ export default function App() {
       case "subscriptions":
         setCurrentPage("subscriptions");
         break;
+      case "equipment":
+        setCurrentPage("equipment");
+        break;
       case "refresh":
         if (confirm("Reload the application? Unsaved changes will be lost.")) {
           window.location.reload();
@@ -140,7 +161,7 @@ export default function App() {
             status: selectedMember.subscription.status, // Keep current status
             autoRenew: selectedMember.subscription.autoRenew || 0
           });
-        } 
+        }
         // 3. If they didn't have a plan before, but we added one during the edit
         else if (data.subscription && !selectedMember?.subscription) {
           await window.api.subscriptions.create({
@@ -227,7 +248,7 @@ export default function App() {
           const members = await window.api.members.getAll();
           setMembers(members);
           setSelectedMember(null);
-          
+
           // Delayed Alert
           setTimeout(() => alert("Member deleted successfully!"), 100);
         } catch (e) {
@@ -362,7 +383,7 @@ export default function App() {
             onViewHistory={handleViewHistory}
             onToggleStatus={handleToggleStatus}
             onRenew={handleRenew}
-           onRefresh={async () => {
+            onRefresh={async () => {
               try {
                 const members = await window.api.members.getAll();
                 setMembers(members);
@@ -386,7 +407,7 @@ export default function App() {
           />
         </div>
       )}
-{/* 
+      {/* 
       {/* Plans Page */}
       {currentPage === "plans" && <PlansPage />}
 
@@ -398,6 +419,9 @@ export default function App() {
 
       {/* Subscriptions Page */}
       {currentPage === "subscriptions" && <SubscriptionsPage />}
+
+      {/* Equipment Page */}
+      {currentPage === "equipment" && <EquipmentPage />}
 
       {/* Member Card Modal */}
       {showMemberCard && cardData && (
@@ -419,7 +443,7 @@ export default function App() {
         member={selectedMember}
         currentPlanId={
           selectedMember?.subscription?.planName
-            ? undefined 
+            ? undefined
             : undefined
         }
       />
