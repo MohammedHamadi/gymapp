@@ -1,11 +1,12 @@
 {
-  "name": "@figma/my-make-file",
+  "name": "gymapp",
   "private": true,
   "version": "0.0.1",
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
     "build": "vite build",
+    "dist": "npm run build && electron-builder",
     "dev": "vite",
     "electron": "electron .",
     "electron:dev": "concurrently -k \"npm run dev\" \"wait-on tcp:5173 && electron .\"",
@@ -13,6 +14,8 @@
     "postinstall": "npm run rebuild"
   },
   "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@mui/icons-material": "7.3.5",
@@ -54,6 +57,7 @@
     "lucide-react": "0.487.0",
     "motion": "12.23.24",
     "next-themes": "0.4.6",
+    "node-machine-id": "^1.1.12",
     "react-barcode": "^1.6.1",
     "react-day-picker": "8.10.1",
     "react-dnd": "16.0.1",
@@ -74,26 +78,46 @@
     "@tailwindcss/vite": "4.1.12",
     "@vitejs/plugin-react": "4.7.0",
     "concurrently": "^9.2.1",
-    "electron": "^40.0.0",
+    "electron": "^34.0.1",
+    "electron-builder": "^26.8.1",
     "tailwindcss": "4.1.12",
     "vite": "6.3.5",
     "wait-on": "^9.0.3"
   },
-  "peerDependencies": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
-    "react-dom": {
-      "optional": true
-    }
-  },
   "pnpm": {
     "overrides": {
       "vite": "6.3.5"
+    }
+  },
+  "build": {
+    "appId": "com.gymapp.pos",
+    "productName": "GymApp",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "compression": "store",
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ]
     }
   }
 }

@@ -5,13 +5,19 @@ import { MemberStatus } from "./components/MemberStatus";
 import { ActionButtons } from "./components/ActionButtons";
 import { MembersTable } from "./components/MembersTable";
 import { MemberCard } from "./components/MemberCard";
-import { SettingsPage } from "./components/SettingsPage";
-import { ReportsPage } from "./components/ReportsPage";
+// import { SettingsPage } from "./components/SettingsPage";
+// import { ReportsPage } from "./components/ReportsPage";
 import { PlansPage } from "./components/PlansPage";
 import { SalesPage } from "./components/SalesPage";
 import { AccessControlPage } from "./components/AccessControlPage";
 import { SubscriptionsPage } from "./components/SubscriptionsPage";
+import { EquipmentPage } from "./components/EquipmentPage";
 import { RenewSubscriptionModal } from "./components/RenewSubscriptionModal";
+import { ConfirmDialog } from "./components/ConfirmDialog";
+
+// --- SECURITY CHANGE 1: IMPORT THE LOCK SCREEN ---
+import { LockScreen } from "./components/lockScreen";
+// -------------------------------------------------
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState("subscribers");
@@ -21,6 +27,59 @@ export default function App() {
   const [cardData, setCardData] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [showRenewModal, setShowRenewModal] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: "danger" | "warning" | "default";
+  } | null>(null);
+
+  // --- SECURITY CHANGE 2: ADD ACTIVATION STATE ---
+  const [isActivated, setIsActivated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkActivation = async () => {
+      try {
+        const id = await window.api.system.getMachineId();
+        const savedKey = localStorage.getItem("gym_activation_key");
+
+        // The Secret Formula
+        const secretString = id + "BAKI-GYM-SECRET";
+        const msgUint8 = new TextEncoder().encode(secretString);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        const expectedKey = hashHex.substring(0, 12).toUpperCase();
+
+        if (savedKey === expectedKey) {
+          setIsActivated(true); // Let them in
+        } else {
+          setIsActivated(false); // Lock them out
+        }
+      } catch (err) {
+        setIsActivated(false);
+      }
+    };
+    checkActivation();
+  }, []);
+  // -----------------------------------------------
+
+  // --- CUSTOM ALERT OVERRIDE ---
+  // Replaces the broken native Electron alert with a smooth, non-blocking popup
+  useEffect(() => {
+    window.alert = (msg) => {
+      const toast = document.createElement('div');
+      toast.className = "fixed bottom-6 right-6 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-2xl z-[9999] transition-all font-medium";
+      toast.innerText = msg;
+      document.body.appendChild(toast);
+
+      // Remove it automatically after 3 seconds
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    };
+  }, []);
+
   useEffect(() => {
     const fetchMembers = async () => {
       try {
@@ -32,38 +91,6 @@ export default function App() {
     };
     fetchMembers();
   }, []);
-  /*const [members, setMembers] = useState<any[]>([
-    {
-      id: 'GYM00001234',
-      qrCode: 'QR1234567890',
-      firstName: 'Ahmed',
-      lastName: 'BEN AKTUL',
-      phone: '+213 555 123 456',
-      gender: 'M',
-      startDate: '2023-12-06',
-      endDate: '2025-12-06',
-      subscriptionType: 'Sessions',
-      price: '45,000',
-      sessionsRemaining: 104,
-      totalSessions: 120,
-      status: 'Active'
-    },
-    {
-      id: 'GYM00005678',
-      qrCode: 'QR5678901234',
-      firstName: 'Ayoub',
-      lastName: 'HADDAD',
-      phone: '+213 555 234 567',
-      gender: 'M',
-      startDate: '2023-04-02',
-      endDate: '2024-04-02',
-      subscriptionType: 'Sessions',
-      price: '28,000',
-      sessionsRemaining: 16,
-      totalSessions: 60,
-      status: 'Active'
-    },
-  ]);*/
 
   const handleNavigate = (page: string) => {
     switch (page) {
@@ -88,10 +115,17 @@ export default function App() {
       case "subscriptions":
         setCurrentPage("subscriptions");
         break;
+      case "equipment":
+        setCurrentPage("equipment");
+        break;
       case "refresh":
-        if (confirm("Reload the application? Unsaved changes will be lost.")) {
-          window.location.reload();
-        }
+        setConfirmConfig({
+          title: "Reload Application",
+          message: "Reload the application? Unsaved changes will be lost.",
+          onConfirm: () => {
+            window.location.reload();
+          },
+        });
         break;
       default:
         alert(
@@ -103,23 +137,43 @@ export default function App() {
   const handleSaveMember = async (data: any) => {
     try {
       if (data.member.id) {
-        // Update existing member (currently only member details supported)
+        // 1. Update existing member details
         await window.api.members.update(data.member.id, {
           ...data.member,
           photoUrl: null, // Ensure parameter exists for SQL
         });
+
+        // 2. THE FIX: Update the subscription details if they were changed!
+        if (data.subscription && selectedMember?.subscription?.id) {
+          await window.api.subscriptions.update(selectedMember.subscription.id, {
+            memberId: data.member.id,
+            planId: data.subscription.planId,
+            startDate: data.subscription.startDate,
+            endDate: data.subscription.endDate,
+            remainingSessions: data.subscription.remainingSessions,
+            pricePaid: data.subscription.pricePaid,
+            status: selectedMember.subscription.status, // Keep current status
+            autoRenew: selectedMember.subscription.autoRenew || 0
+          });
+        }
+        // 3. If they didn't have a plan before, but we added one during the edit
+        else if (data.subscription && !selectedMember?.subscription) {
+          await window.api.subscriptions.create({
+            memberId: data.member.id,
+            planId: data.subscription.planId,
+            startDate: data.subscription.startDate,
+            endDate: data.subscription.endDate,
+            remainingSessions: data.subscription.remainingSessions,
+            status: "ACTIVE",
+            pricePaid: data.subscription.pricePaid,
+            autoRenew: 0,
+          });
+        }
+
       } else {
-        // Create new member
-        // 1. Generate IDs client-side or let backend handle it.
-        // The form currently does not generate IDs, so we rely on backend or generate here.
-        // Let's generate a simple ID here or modify repository to auto-id.
-        // Looking at Schema, ID is TEXT.
-        // Looking at MemberForm, it was generating ID locally before my change?
-        // Ah, I removed the local ID generation in MemberForm.
-        // Ideally, backend should handle ID generation or we do it here.
-        // Let's generate one here to valid schema.
+        // Create new member (This part stays exactly the same)
         const memberId = `GYM${Date.now().toString().slice(-8)}`;
-        const qrCode = memberId; // QR Code same as ID
+        const qrCode = memberId;
 
         const newMember = {
           ...data.member,
@@ -130,15 +184,15 @@ export default function App() {
 
         await window.api.members.create(newMember);
 
-        // 2. Create Subscription if provided
+        // Create Subscription if provided
         if (data.subscription) {
           const newSubscription = {
             memberId: memberId,
             planId: data.subscription.planId,
             startDate: data.subscription.startDate,
-            endDate: data.subscription.endDate, // CAN BE NULL
+            endDate: data.subscription.endDate,
             remainingSessions: data.subscription.remainingSessions,
-            status: "ACTIVE" as const,
+            status: "ACTIVE",
             pricePaid: data.subscription.pricePaid,
             autoRenew: 0,
           };
@@ -146,18 +200,19 @@ export default function App() {
         }
       }
 
-      // Refresh list
+      // Refresh list so the new session count instantly appears in the table
       const members = await window.api.members.getAll();
       setMembers(members);
 
-      alert(
-        data.member.id ? "Member updated!" : "Member and Subscription created!",
-      );
+      // Give the UI 100ms to unlock the screen before showing the alert
+      setTimeout(() => {
+        alert(data.member.id ? "Member updated!" : "Member and Subscription created!");
+      }, 100);
 
       // Close/Clear
       setSelectedMember(null);
       setIsEditing(false);
-      // setCardData(newMember) // If we want to show card immediately
+
     } catch (error) {
       console.error("Error saving member:", error);
       alert("Failed to save member.");
@@ -179,22 +234,26 @@ export default function App() {
 
   const handleDelete = async () => {
     if (selectedMember) {
-      if (
-        confirm(
-          `Are you sure you want to delete ${selectedMember.firstName} ${selectedMember.lastName}?`,
-        )
-      ) {
-        try {
-          await window.api.members.delete(selectedMember.id);
-          const members = await window.api.members.getAll();
-          setMembers(members);
-          setSelectedMember(null);
-          alert("Member deleted successfully!");
-        } catch (e) {
-          console.error(e);
-          alert("Failed to delete member");
-        }
-      }
+      setConfirmConfig({
+        title: "Delete Member",
+        message: `Are you sure you want to delete ${selectedMember.firstName} ${selectedMember.lastName}?`,
+        variant: "danger",
+        onConfirm: async () => {
+          try {
+            await window.api.members.delete(selectedMember.id);
+            const members = await window.api.members.getAll();
+            setMembers(members);
+            setSelectedMember(null);
+
+            // Delayed Alert
+            setTimeout(() => alert("Member deleted successfully!"), 100);
+          } catch (e) {
+            console.error(e);
+            setTimeout(() => alert("Failed to delete member"), 100);
+          }
+          setConfirmConfig(null);
+        },
+      });
     } else {
       alert("Please select a member from the table first");
     }
@@ -228,29 +287,35 @@ export default function App() {
       const currentStatus = selectedMember.subscription.status;
       const newStatus = currentStatus === "ACTIVE" ? "CANCELLED" : "ACTIVE";
 
-      if (confirm(`Change subscription status to ${newStatus}?`)) {
-        try {
-          await window.api.subscriptions.updateStatus(
-            selectedMember.subscription.id,
-            newStatus,
-          );
+      setConfirmConfig({
+        title: "Update Subscription Status",
+        message: `Change subscription status to ${newStatus}?`,
+        variant: newStatus === "CANCELLED" ? "danger" : "default",
+        onConfirm: async () => {
+          try {
+            await window.api.subscriptions.updateStatus(
+              selectedMember.subscription.id,
+              newStatus,
+            );
 
-          // Refresh
-          const members = await window.api.members.getAll();
-          setMembers(members);
+            // Refresh
+            const members = await window.api.members.getAll();
+            setMembers(members);
 
-          // Update selected member view if needed
-          const updatedMember = members.find(
-            (m: any) => m.id === selectedMember.id,
-          );
-          setSelectedMember(updatedMember);
+            // Update selected member view if needed
+            const updatedMember = members.find(
+              (m: any) => m.id === selectedMember.id,
+            );
+            setSelectedMember(updatedMember);
 
-          alert(`Subscription status updated to: ${newStatus}`);
-        } catch (error) {
-          console.error("Failed to update status", error);
-          alert("Error updating status");
-        }
-      }
+            alert(`Subscription status updated to: ${newStatus}`);
+          } catch (error) {
+            console.error("Failed to update status", error);
+            alert("Error updating status");
+          }
+          setConfirmConfig(null);
+        },
+      });
     } else {
       alert("Selected member has no active subscription to toggle.");
     }
@@ -284,6 +349,14 @@ export default function App() {
     }
   };
 
+  // --- SECURITY CHANGE 3: THE GATEKEEPER INTERCEPTS THE RENDER ---
+  if (isActivated === null) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Loading Security Module...</div>;
+
+  if (isActivated === false) {
+    return <LockScreen onUnlock={() => setIsActivated(true)} />;
+  }
+  // ---------------------------------------------------------------
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
       {/* Top Navigation */}
@@ -303,11 +376,6 @@ export default function App() {
                 onCancel={() => setIsEditing(false)}
               />
             </div>
-
-            {/* Right Panel - Member Status (1/3 width)
-            <div className="lg:col-span-1">
-              <MemberStatus selectedMember={selectedMember} />
-            </div> */}
           </div>
 
           {/* Action Buttons */}
@@ -323,10 +391,11 @@ export default function App() {
               try {
                 const members = await window.api.members.getAll();
                 setMembers(members);
-                alert("Refreshed member list!");
+                // Delayed Alert
+                setTimeout(() => alert("Refreshed member list!"), 100);
               } catch (error) {
                 console.error("Refresh failed:", error);
-                alert("Failed to refresh");
+                setTimeout(() => alert("Failed to refresh"), 100);
               }
             }}
           />
@@ -342,13 +411,7 @@ export default function App() {
           />
         </div>
       )}
-
-      {/* Settings Page */}
-      {currentPage === "settings" && <SettingsPage />}
-
-      {/* Reports Page */}
-      {currentPage === "reports" && <ReportsPage />}
-
+      {/* 
       {/* Plans Page */}
       {currentPage === "plans" && <PlansPage />}
 
@@ -360,6 +423,9 @@ export default function App() {
 
       {/* Subscriptions Page */}
       {currentPage === "subscriptions" && <SubscriptionsPage />}
+
+      {/* Equipment Page */}
+      {currentPage === "equipment" && <EquipmentPage />}
 
       {/* Member Card Modal */}
       {showMemberCard && cardData && (
@@ -381,11 +447,17 @@ export default function App() {
         member={selectedMember}
         currentPlanId={
           selectedMember?.subscription?.planName
-            ? undefined // We don't have the ID directly easily available from selectedMember.subscription currently effectively.
-            : // Actually we can try to pass it if we had it.
-              // For now let user select.
-              undefined
+            ? undefined
+            : undefined
         }
+      />
+      <ConfirmDialog
+        open={!!confirmConfig}
+        title={confirmConfig?.title || ""}
+        message={confirmConfig?.message || ""}
+        onConfirm={confirmConfig?.onConfirm || (() => {})}
+        onCancel={() => setConfirmConfig(null)}
+        variant={confirmConfig?.variant}
       />
     </div>
   );

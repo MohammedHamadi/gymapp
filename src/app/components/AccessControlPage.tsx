@@ -1,3 +1,5 @@
+import successSound from '../../assets/sounds/success.mp3';
+import errorSound from '../../assets/sounds/error.mp3';
 import {
   DoorOpen,
   UserCheck,
@@ -93,11 +95,13 @@ export function AccessControlPage() {
       fetchStats();
 
       if (result.status === "GRANTED") {
+        new Audio(successSound).play().catch(e => console.log("Audio error:", e));
         toast.success(result.message || "Access Granted", {
           description: `Member: ${result.member.firstName} ${result.member.lastName}`,
           duration: 3000,
         });
       } else {
+        new Audio(errorSound).play().catch(e => console.log("Audio error:", e));
         toast.error("Access Denied", {
           description: `Reason: ${result.reason}`,
           duration: 5000,

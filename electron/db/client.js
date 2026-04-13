@@ -12,7 +12,9 @@ const dbPath = app.isPackaged
   ? path.join(app.getPath("userData"), "gym.db")
   : path.join(__dirname, "../../gym.db");
 
-const db = new Database(dbPath, { verbose: console.log });
+const db = new Database(dbPath, { 
+  verbose: app.isPackaged ? null : console.log 
+});
 db.pragma("journal_mode = WAL");
 
 // Initialize Schema

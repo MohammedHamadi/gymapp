@@ -43,11 +43,11 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 CREATE TABLE IF NOT EXISTS access_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     member_id TEXT NOT NULL,
-    subscription_id INTEGER,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     type TEXT CHECK(type IN ('CHECK_IN', 'CHECK_OUT')) NOT NULL,
     status TEXT CHECK(status IN ('GRANTED', 'DENIED')) NOT NULL,
     denial_reason TEXT,
+    subscription_id INTEGER,
     FOREIGN KEY (member_id) REFERENCES members(id),
     FOREIGN KEY (subscription_id) REFERENCES subscriptions(id)
 );
@@ -63,6 +63,20 @@ CREATE TABLE IF NOT EXISTS transactions (
     payment_method TEXT DEFAULT 'CASH',
     FOREIGN KEY (member_id) REFERENCES members(id),
     FOREIGN KEY (subscription_id) REFERENCES subscriptions(id)
+);
+
+-- Equipment Table
+CREATE TABLE IF NOT EXISTS equipment (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    category TEXT CHECK(category IN ('CARDIO', 'STRENGTH', 'FLEXIBILITY', 'FREE_WEIGHTS', 'OTHER')) NOT NULL,
+    status TEXT CHECK(status IN ('AVAILABLE', 'IN_USE', 'MAINTENANCE', 'OUT_OF_ORDER')) DEFAULT 'AVAILABLE',
+    condition TEXT CHECK(condition IN ('NEW', 'GOOD', 'FAIR', 'POOR')) DEFAULT 'NEW',
+    quantity INTEGER DEFAULT 1,
+    purchase_date TEXT,
+    notes TEXT,
+    image_path TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Products Table

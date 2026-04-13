@@ -65,6 +65,18 @@ export interface ElectronApi {
     getAll: () => Promise<any[]>;
     getRecent: (limit: number) => Promise<any[]>;
   };
+  equipment: {
+    getAll: () => Promise<any[]>;
+    getById: (id: number) => Promise<any>;
+    create: (data: any) => Promise<any>;
+    update: (id: number, data: any) => Promise<any>;
+    delete: (id: number) => Promise<any>;
+    pickImage: () => Promise<string | null>;
+  };
+  system: {
+    getMachineId: () => Promise<string | null>;
+  };
+  printReceipt: (html: string) => Promise<void>;
 }
 
 declare global {

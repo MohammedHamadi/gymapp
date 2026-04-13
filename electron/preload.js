@@ -1,7 +1,8 @@
-import { contextBridge, ipcRenderer } from "electron";
+const { contextBridge, ipcRenderer } = require("electron");
 console.log("✅ PRELOAD LOADED");
 
 contextBridge.exposeInMainWorld("api", {
+   printReceipt: (html) => ipcRenderer.invoke("print-receipt", html),
   // Generic invoke wrapper for flexibility
   invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
 
@@ -72,4 +73,16 @@ contextBridge.exposeInMainWorld("api", {
     getAll: () => ipcRenderer.invoke("sales:getAll"),
     getRecent: (limit) => ipcRenderer.invoke("sales:getRecent", limit),
   },
+  equipment: {
+    getAll: () => ipcRenderer.invoke("equipment:getAll"),
+    getById: (id) => ipcRenderer.invoke("equipment:getById", id),
+    create: (data) => ipcRenderer.invoke("equipment:create", data),
+    update: (id, data) => ipcRenderer.invoke("equipment:update", id, data),
+    delete: (id) => ipcRenderer.invoke("equipment:delete", id),
+    pickImage: () => ipcRenderer.invoke("equipment:pickImage"),
+  },
+  system: {
+    getMachineId: () => ipcRenderer.invoke("system:getMachineId"),
+    log: (...args) => ipcRenderer.send("log", ...args),
+  }
 });

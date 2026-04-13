@@ -1,7 +1,9 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron"; 
 import path from "path";
 import { fileURLToPath } from "url";
 import db from "./db/client.js";
+import pkg from 'node-machine-id';
+const { machineIdSync } = pkg;
 import { setupMemberHandlers } from "./handlers/memberHandlers.js";
 import { setupPlanHandlers } from "./handlers/planHandlers.js";
 import { setupSubscriptionHandlers } from "./handlers/subscriptionHandlers.js";
@@ -9,6 +11,7 @@ import { setupAccessLogHandlers } from "./handlers/accessLogHandlers.js";
 import { setupTransactionHandlers } from "./handlers/transactionHandlers.js";
 import { setupProductHandlers } from "./handlers/productHandlers.js";
 import { setupSalesHistoryHandlers } from "./handlers/salesHistoryHandlers.js";
+import { setupEquipmentHandlers } from "./handlers/equipmentHandlers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +43,29 @@ app.whenReady().then(() => {
   setupTransactionHandlers();
   setupProductHandlers();
   setupSalesHistoryHandlers();
+  setupEquipmentHandlers();
+
+  ipcMain.handle("system:getMachineId", () => {
+    try {
+      const id = machineIdSync(); 
+      return id;
+    } catch (error) {
+      console.error("Failed to get machine ID:", error);
+      return null;
+    }
+  });
+
+  ipcMain.on("log", (event, ...args) => {
+    console.log("[RENDERER LOG]:", ...args);
+  });
+
+  ipcMain.handle("print-receipt", (event, html) => {
+    const receiptWin = new BrowserWindow({ show: false });
+    receiptWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    receiptWin.webContents.on('did-finish-load', () => {
+      receiptWin.webContents.print({ silent: false });
+    });
+  });
   createWindow();
 
   app.on("activate", function () {

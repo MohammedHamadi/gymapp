@@ -14,7 +14,7 @@ export function setupSubscriptionHandlers() {
     return subscriptionRepository.findByMemberId(memberId);
   });
 
-  ipcMain.handle("subscriptions:findActiveByMemberId", (event, memberId) => {
+  ipcMain.handle("subscriptions:getActiveByMember", (event, memberId) => {
     return subscriptionRepository.findActiveByMemberId(memberId);
   });
 

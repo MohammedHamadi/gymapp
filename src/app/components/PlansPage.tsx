@@ -11,11 +11,18 @@ import {
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { PlanForm } from "./PlanForm";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 export function PlansPage() {
   const [plans, setPlans] = useState<any[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: "danger" | "warning" | "default";
+  } | null>(null);
 
   const fetchPlans = async () => {
     try {
@@ -41,15 +48,21 @@ export function PlansPage() {
   };
 
   const handleDeleteClick = async (id: number) => {
-    if (confirm("Are you sure you want to delete this plan?")) {
-      try {
-        await window.api.plans.delete(id);
-        fetchPlans(); // Refresh list
-      } catch (error) {
-        console.error("Error deleting plan:", error);
-        alert("Failed to delete plan");
-      }
-    }
+    setConfirmConfig({
+      title: "Delete Plan",
+      message: "Are you sure you want to delete this plan?",
+      variant: "danger",
+      onConfirm: async () => {
+        try {
+          await window.api.plans.delete(id);
+          fetchPlans(); // Refresh list
+        } catch (error) {
+          console.error("Error deleting plan:", error);
+          alert("Failed to delete plan");
+        }
+        setConfirmConfig(null);
+      },
+    });
   };
 
   const handleSavePlan = async (planData: any) => {
@@ -170,6 +183,14 @@ export function PlansPage() {
         onClose={() => setIsFormOpen(false)}
         onSave={handleSavePlan}
         initialData={selectedPlan}
+      />
+      <ConfirmDialog
+        open={!!confirmConfig}
+        title={confirmConfig?.title || ""}
+        message={confirmConfig?.message || ""}
+        onConfirm={confirmConfig?.onConfirm || (() => {})}
+        onCancel={() => setConfirmConfig(null)}
+        variant={confirmConfig?.variant}
       />
     </div>
   );
