@@ -47,15 +47,15 @@ A comprehensive Point of Sale (POS) and membership management system built with 
 
 ## Tech Stack
 
-- **Core**: [Electron](https://www.electronjs.org/) - For building the desktop application.
-- **Frontend**: [React](https://react.dev/) + [Vite](https://vitejs.dev/) - For the user interface.
-- **Styling**: [Material UI (MUI)](https://mui.com/) - Component library.
-- **Icons**: [Material Icons](https://fonts.google.com/icons)
-- **Database**: [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) - Embedded SQLite database.
+- **Core**: [Electron 34](https://www.electronjs.org/) — Desktop application framework.
+- **Frontend**: [React 18](https://react.dev/) + [Vite 6](https://vitejs.dev/) — UI and build tooling.
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) + [Radix UI](https://www.radix-ui.com/) (shadcn/ui) — Utility-first CSS with accessible component primitives.
+- **Icons**: [Lucide React](https://lucide.dev/) — Clean, consistent icon set.
+- **Database**: [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) — Embedded SQLite database.
 - **Utilities**:
-  - `node-machine-id`: To generate a unique identifier for the machine.
-  - `qrcode.react`: For QR code generation.
-  - `html2canvas`: For capturing screenshots/prints.
+  - `node-machine-id` — Hardware-based machine identification for licensing.
+  - `react-barcode` — Barcode generation for member cards.
+  - `date-fns` — Date formatting and manipulation.
 
 ## Installation
 
@@ -107,7 +107,3 @@ The database includes the following tables:
 - `products`: Manages inventory of products.
 - `sales_history`: Logs all sales transactions.
 - `equipment`: Manages gym equipment.
-
-## License
-
-[MIT](LICENSE)
