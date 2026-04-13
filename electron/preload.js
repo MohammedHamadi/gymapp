@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+const { contextBridge, ipcRenderer } = require("electron");
 console.log("✅ PRELOAD LOADED");
 
 contextBridge.exposeInMainWorld("api", {
@@ -83,5 +83,6 @@ contextBridge.exposeInMainWorld("api", {
   },
   system: {
     getMachineId: () => ipcRenderer.invoke("system:getMachineId"),
+    log: (...args) => ipcRenderer.send("log", ...args),
   }
 });

@@ -29,6 +29,7 @@ import {
 } from "./ui/dialog";
 import { useState, useEffect } from "react";
 import { Product, SalesHistory, Member } from "../../types/types";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 export function SalesPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -45,6 +46,12 @@ const [lastSaleData, setLastSaleData] = useState<any>(null);
     "Cash",
   );
   const [selectedMemberId, setSelectedMemberId] = useState<string>("walk_in");
+  const [confirmConfig, setConfirmConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: "danger" | "warning" | "default";
+  } | null>(null);
 
   // New Product Form State
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -150,23 +157,27 @@ const [lastSaleData, setLastSaleData] = useState<any>(null);
     product: Product, // <-- Notice I changed productId to the whole product object
   ) => {
     e.stopPropagation(); 
-    if (!confirm(`Are you sure you want to remove ${product.name}?`)) return;
-
-    try {
-      // Instead of hard deleting, we "soft delete" by updating is_active to 0
-      await window.api.products.update(product.id, {
-        name: product.name,
-        price: product.price,
-        type: product.type,
-        stock: product.stock,
-        is_active: 0, // <--- This hides the product!
-      });
-      
-      loadData();
-    } catch (error) {
-      console.error("Failed to archive product", error);
-      alert("Failed to remove product.");
-    }
+    setConfirmConfig({
+      title: "Remove Product",
+      message: `Are you sure you want to remove ${product.name}?`,
+      variant: "danger",
+      onConfirm: async () => {
+        try {
+          await window.api.products.update(product.id, {
+            name: product.name,
+            price: product.price,
+            type: product.type,
+            stock: product.stock,
+            is_active: 0,
+          });
+          loadData();
+        } catch (error) {
+          console.error("Failed to archive product", error);
+          alert("Failed to remove product.");
+        }
+        setConfirmConfig(null);
+      },
+    });
   };
 
  const addItem = (product: Product) => {
@@ -724,6 +735,14 @@ setIsReceiptModalOpen(true);
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={!!confirmConfig}
+        title={confirmConfig?.title || ""}
+        message={confirmConfig?.message || ""}
+        onConfirm={confirmConfig?.onConfirm || (() => {})}
+        onCancel={() => setConfirmConfig(null)}
+        variant={confirmConfig?.variant}
+      />
     </div>
   );
 }

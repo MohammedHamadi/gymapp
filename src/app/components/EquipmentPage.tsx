@@ -15,6 +15,7 @@ import {
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { EquipmentForm } from "./EquipmentForm";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 const categoryLabels: Record<string, string> = {
   CARDIO: "Cardio",
@@ -51,6 +52,12 @@ export function EquipmentPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [confirmConfig, setConfirmConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: "danger" | "warning" | "default";
+  } | null>(null);
 
   const filteredEquipment = equipment.filter((item) =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -80,15 +87,21 @@ export function EquipmentPage() {
   };
 
   const handleDeleteClick = async (id: number) => {
-    if (confirm("Are you sure you want to delete this equipment?")) {
-      try {
-        await (window as any).api.equipment.delete(id);
-        fetchEquipment();
-      } catch (error) {
-        console.error("Error deleting equipment:", error);
-        alert("Failed to delete equipment");
-      }
-    }
+    setConfirmConfig({
+      title: "Delete Equipment",
+      message: "Are you sure you want to delete this equipment?",
+      variant: "danger",
+      onConfirm: async () => {
+        try {
+          await (window as any).api.equipment.delete(id);
+          fetchEquipment();
+        } catch (error) {
+          console.error("Error deleting equipment:", error);
+          alert("Failed to delete equipment");
+        }
+        setConfirmConfig(null);
+      },
+    });
   };
 
   const handleSaveEquipment = async (equipmentData: any) => {
@@ -267,6 +280,14 @@ export function EquipmentPage() {
         onClose={() => setIsFormOpen(false)}
         onSave={handleSaveEquipment}
         initialData={selectedEquipment}
+      />
+      <ConfirmDialog
+        open={!!confirmConfig}
+        title={confirmConfig?.title || ""}
+        message={confirmConfig?.message || ""}
+        onConfirm={confirmConfig?.onConfirm || (() => {})}
+        onCancel={() => setConfirmConfig(null)}
+        variant={confirmConfig?.variant}
       />
     </div>
   );

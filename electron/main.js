@@ -55,6 +55,10 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.on("log", (event, ...args) => {
+    console.log("[RENDERER LOG]:", ...args);
+  });
+
   ipcMain.handle("print-receipt", (event, html) => {
     const receiptWin = new BrowserWindow({ show: false });
     receiptWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);

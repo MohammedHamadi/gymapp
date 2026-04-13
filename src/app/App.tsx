@@ -13,6 +13,7 @@ import { AccessControlPage } from "./components/AccessControlPage";
 import { SubscriptionsPage } from "./components/SubscriptionsPage";
 import { EquipmentPage } from "./components/EquipmentPage";
 import { RenewSubscriptionModal } from "./components/RenewSubscriptionModal";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 
 // --- SECURITY CHANGE 1: IMPORT THE LOCK SCREEN ---
 import { LockScreen } from "./components/lockScreen";
@@ -26,6 +27,12 @@ export default function App() {
   const [cardData, setCardData] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [showRenewModal, setShowRenewModal] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: "danger" | "warning" | "default";
+  } | null>(null);
 
   // --- SECURITY CHANGE 2: ADD ACTIVATION STATE ---
   const [isActivated, setIsActivated] = useState<boolean | null>(null);
@@ -71,23 +78,6 @@ export default function App() {
         toast.remove();
       }, 3000);
     };
-
-    // --- CUSTOM CONFIRM FIX ---
-    // Native Electron confirm() steals keyboard focus from the webview.
-    // Text inputs stop accepting keyboard input (buttons still work via mouse).
-    // This wrapper calls the native confirm, then forcefully restores focus.
-    const nativeConfirm = window.confirm;
-    window.confirm = (msg?: string): boolean => {
-      const result = nativeConfirm.call(window, msg ?? "");
-      // Restore keyboard focus to the webview after native dialog closes
-      setTimeout(() => {
-        window.focus();
-        document.body.focus();
-        // Dispatch a synthetic click to fully re-engage keyboard input
-        document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      }, 50);
-      return result;
-    };
   }, []);
 
   useEffect(() => {
@@ -129,9 +119,13 @@ export default function App() {
         setCurrentPage("equipment");
         break;
       case "refresh":
-        if (confirm("Reload the application? Unsaved changes will be lost.")) {
-          window.location.reload();
-        }
+        setConfirmConfig({
+          title: "Reload Application",
+          message: "Reload the application? Unsaved changes will be lost.",
+          onConfirm: () => {
+            window.location.reload();
+          },
+        });
         break;
       default:
         alert(
@@ -240,22 +234,26 @@ export default function App() {
 
   const handleDelete = async () => {
     if (selectedMember) {
-      if (
-        confirm(`Are you sure you want to delete ${selectedMember.firstName} ${selectedMember.lastName}?`)
-      ) {
-        try {
-          await window.api.members.delete(selectedMember.id);
-          const members = await window.api.members.getAll();
-          setMembers(members);
-          setSelectedMember(null);
+      setConfirmConfig({
+        title: "Delete Member",
+        message: `Are you sure you want to delete ${selectedMember.firstName} ${selectedMember.lastName}?`,
+        variant: "danger",
+        onConfirm: async () => {
+          try {
+            await window.api.members.delete(selectedMember.id);
+            const members = await window.api.members.getAll();
+            setMembers(members);
+            setSelectedMember(null);
 
-          // Delayed Alert
-          setTimeout(() => alert("Member deleted successfully!"), 100);
-        } catch (e) {
-          console.error(e);
-          setTimeout(() => alert("Failed to delete member"), 100);
-        }
-      }
+            // Delayed Alert
+            setTimeout(() => alert("Member deleted successfully!"), 100);
+          } catch (e) {
+            console.error(e);
+            setTimeout(() => alert("Failed to delete member"), 100);
+          }
+          setConfirmConfig(null);
+        },
+      });
     } else {
       alert("Please select a member from the table first");
     }
@@ -289,29 +287,35 @@ export default function App() {
       const currentStatus = selectedMember.subscription.status;
       const newStatus = currentStatus === "ACTIVE" ? "CANCELLED" : "ACTIVE";
 
-      if (confirm(`Change subscription status to ${newStatus}?`)) {
-        try {
-          await window.api.subscriptions.updateStatus(
-            selectedMember.subscription.id,
-            newStatus,
-          );
+      setConfirmConfig({
+        title: "Update Subscription Status",
+        message: `Change subscription status to ${newStatus}?`,
+        variant: newStatus === "CANCELLED" ? "danger" : "default",
+        onConfirm: async () => {
+          try {
+            await window.api.subscriptions.updateStatus(
+              selectedMember.subscription.id,
+              newStatus,
+            );
 
-          // Refresh
-          const members = await window.api.members.getAll();
-          setMembers(members);
+            // Refresh
+            const members = await window.api.members.getAll();
+            setMembers(members);
 
-          // Update selected member view if needed
-          const updatedMember = members.find(
-            (m: any) => m.id === selectedMember.id,
-          );
-          setSelectedMember(updatedMember);
+            // Update selected member view if needed
+            const updatedMember = members.find(
+              (m: any) => m.id === selectedMember.id,
+            );
+            setSelectedMember(updatedMember);
 
-          alert(`Subscription status updated to: ${newStatus}`);
-        } catch (error) {
-          console.error("Failed to update status", error);
-          alert("Error updating status");
-        }
-      }
+            alert(`Subscription status updated to: ${newStatus}`);
+          } catch (error) {
+            console.error("Failed to update status", error);
+            alert("Error updating status");
+          }
+          setConfirmConfig(null);
+        },
+      });
     } else {
       alert("Selected member has no active subscription to toggle.");
     }
@@ -446,6 +450,14 @@ export default function App() {
             ? undefined
             : undefined
         }
+      />
+      <ConfirmDialog
+        open={!!confirmConfig}
+        title={confirmConfig?.title || ""}
+        message={confirmConfig?.message || ""}
+        onConfirm={confirmConfig?.onConfirm || (() => {})}
+        onCancel={() => setConfirmConfig(null)}
+        variant={confirmConfig?.variant}
       />
     </div>
   );

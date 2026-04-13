@@ -14,10 +14,9 @@ export function LockScreen({ onUnlock }: { onUnlock: () => void }) {
       try {
         const id = await window.api.system.getMachineId();
         setMachineId(id || "UNKNOWN-DEVICE");
-      } catch (err) {
-        // ADD THIS CONSOLE.ERROR LINE:
+      } catch (err: any) {
         console.error("HARDWARE ID ERROR:", err);
-        setMachineId("ERROR-READING-HARDWARE");
+        setMachineId("ERROR: " + (err ? err.message || err.toString() : "Unknown"));
       }
     };
     fetchMachineId();
