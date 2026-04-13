@@ -1,5 +1,5 @@
 {
-  "name": "@figma/my-make-file",
+  "name": "gymapp",
   "private": true,
   "version": "0.0.1",
   "type": "module",
@@ -14,6 +14,8 @@
     "postinstall": "npm run rebuild"
   },
   "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "@emotion/react": "11.14.0",
     "@emotion/styled": "11.14.1",
     "@mui/icons-material": "7.3.5",
@@ -82,18 +84,6 @@
     "vite": "6.3.5",
     "wait-on": "^9.0.3"
   },
-  "peerDependencies": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
-  },
-  "peerDependenciesMeta": {
-    "react": {
-      "optional": true
-    },
-    "react-dom": {
-      "optional": true
-    }
-  },
   "pnpm": {
     "overrides": {
       "vite": "6.3.5"
@@ -110,9 +100,15 @@
       "electron/**/*",
       "package.json"
     ],
+    "asar": true,
+    "compression": "store",
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": true
+    },
     "win": {
-      "target": "nsis",
-      "icon": "build/icon.ico"
+      "target": "nsis"
     }
   }
 }

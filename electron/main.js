@@ -45,9 +45,6 @@ app.whenReady().then(() => {
   setupSalesHistoryHandlers();
   setupEquipmentHandlers();
 
-  // ADD THIS CONSOLE LOG RIGHT HERE:
-  console.log("🚀 REGISTERING HARDWARE LOCK...");
-
   ipcMain.handle("system:getMachineId", () => {
     try {
       const id = machineIdSync(); 
@@ -57,8 +54,14 @@ app.whenReady().then(() => {
       return null;
     }
   });
-  
 
+  ipcMain.handle("print-receipt", (event, html) => {
+    const receiptWin = new BrowserWindow({ show: false });
+    receiptWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    receiptWin.webContents.on('did-finish-load', () => {
+      receiptWin.webContents.print({ silent: false });
+    });
+  });
   createWindow();
 
   app.on("activate", function () {
