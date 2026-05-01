@@ -9,6 +9,7 @@ import {
   RefreshCw,
   BookOpen,
   Dumbbell,
+  ScanLine,
   X,
 } from "lucide-react";
 
@@ -56,7 +57,12 @@ const navigationItems = [
     color: "bg-orange-600",
     action: "equipment",
   },
-
+  {
+    icon: ScanLine,
+    label: "Scanner",
+    color: "bg-indigo-600",
+    action: "scanner",
+  },
 ];
 
 export function TopNavigation({ onNavigate }: TopNavigationProps) {

@@ -5,69 +5,100 @@
 
 /* --- PRINT STYLES (RECEIPT & MEMBER CARD) --- */
 @media print {
-  /* 1. Hide everything on the screen by default */
+  /* 1. Hide EVERYTHING on the page by default */
   body * {
     visibility: hidden;
   }
 
-  /* 2. Prevent the browser from generating extra pages */
+  /* 2. Reset the page – no extra whitespace or overflow */
   html, body {
     height: auto !important;
+    width: auto !important;
     margin: 0 !important;
-  }
-  
-  /* Stop the dark overlay from perfectly centering the card on the paper */
-  .min-h-screen, .fixed.inset-0 {
-    min-height: 0 !important;
-    height: auto !important;
-    position: absolute !important;
-    align-items: flex-start !important; /* Pushes card to the top */
     padding: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* 3. Kill all fixed/flex overlays so nothing stays centered on page */
+  .fixed, [data-radix-portal], [data-state] {
+    position: static !important;
+    display: block !important;
+    height: auto !important;
+    width: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
     background: transparent !important;
     border: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+    inset: unset !important;
+    overflow: visible !important;
+  }
+
+  /* Hide the dark backdrop overlay entirely */
+  [data-radix-portal] > [data-state] {
+    display: none !important;
   }
 
   /* =======================================
      RECEIPT PRINTING
      ======================================= */
-  div[role="dialog"], 
+
+  /* Make the dialog and ALL its children visible */
+  div[role="dialog"],
   div[role="dialog"] * {
-    visibility: visible;
+    visibility: visible !important;
   }
-  
+
+  /* Position the dialog content at the top-left of the paper */
   div[role="dialog"] {
     position: absolute !important;
     left: 0 !important;
     top: 0 !important;
     transform: none !important;
+    translate: none !important;
     margin: 0 !important;
-    padding: 20px !important;
+    padding: 10mm !important;
     width: 100% !important;
     max-width: 100% !important;
+    max-height: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: white !important;
   }
 
+  /* Force all receipt text to black for readability */
   div[role="dialog"] * {
     color: black !important;
+  }
+
+  /* Make sure the printable receipt area fills the width */
+  #printable-receipt {
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   /* =======================================
      MEMBER CARD PRINTING
      ======================================= */
-  #memberCard, 
+  #memberCard,
   #memberCard * {
-    visibility: visible;
+    visibility: visible !important;
   }
 
   #memberCard {
     position: absolute !important;
-    left: 20px !important; /* Give it a little breathing room from the paper edge */
-    top: 20px !important;
+    left: 5mm !important;
+    top: 5mm !important;
     transform: none !important;
     margin: 0 !important;
     width: 100% !important;
-    max-width: 500px !important; 
-    
-    /* THE FIX: Tell the printer to NEVER cut this element in half */
+    max-width: 500px !important;
+
+    /* Never split the card across pages */
     page-break-inside: avoid !important;
     break-inside: avoid !important;
 
@@ -77,10 +108,16 @@
   }
 
   /* =======================================
-     CLEANUP (Hide Buttons)
+     CLEANUP – Hide Buttons & Non-Print UI
      ======================================= */
   .hide-on-print,
   button {
+    display: none !important;
+  }
+
+  /* Hide the close X button on the dialog */
+  div[role="dialog"] button[class*="close"],
+  div[role="dialog"] button:has(svg) {
     display: none !important;
   }
 }

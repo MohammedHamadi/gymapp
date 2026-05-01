@@ -12,6 +12,7 @@ import { SalesPage } from "./components/SalesPage";
 import { AccessControlPage } from "./components/AccessControlPage";
 import { SubscriptionsPage } from "./components/SubscriptionsPage";
 import { EquipmentPage } from "./components/EquipmentPage";
+import { ScannerPage } from "./components/ScannerPage";
 import { RenewSubscriptionModal } from "./components/RenewSubscriptionModal";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 
@@ -111,6 +112,9 @@ export default function App() {
         break;
       case "access":
         setCurrentPage("access");
+        break;
+      case "scanner":
+        setCurrentPage("scanner");
         break;
       case "subscriptions":
         setCurrentPage("subscriptions");
@@ -359,8 +363,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
-      {/* Top Navigation */}
-      <TopNavigation onNavigate={handleNavigate} />
+      {/* Full-screen Scanner Page — no navigation bar */}
+      {currentPage === "scanner" && (
+        <ScannerPage onBack={() => setCurrentPage("subscribers")} />
+      )}
+
+      {/* Top Navigation (hidden when on scanner page) */}
+      {currentPage !== "scanner" && <TopNavigation onNavigate={handleNavigate} />}
 
       {/* Main Content */}
       {currentPage === "subscribers" && (
