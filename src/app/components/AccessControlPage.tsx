@@ -15,6 +15,7 @@ import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { normalizeBarcode } from "../../utils/barcode";
 
 export function AccessControlPage() {
   const [checkInMode, setCheckInMode] = useState(true);
@@ -27,6 +28,7 @@ export function AccessControlPage() {
   });
   const [lastScanResult, setLastScanResult] = useState<any>(null);
   const [pendingSelection, setPendingSelection] = useState<any>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -69,11 +71,13 @@ export function AccessControlPage() {
   };
 
   const handleAccessRequest = async (id: string, subscriptionId?: number) => {
-    if (!id.trim()) return;
+    const cleanId = normalizeBarcode(id);
+    if (!cleanId || isProcessing) return;
 
+    setIsProcessing(true);
     try {
       const result = await window.api.accessLogs.validate({
-        id,
+        id: cleanId,
         type: checkInMode ? "CHECK_IN" : "CHECK_OUT",
         subscriptionId,
       });
@@ -81,13 +85,16 @@ export function AccessControlPage() {
       // Handle PENDING_SELECTION — member has multiple active subscriptions
       if (result.status === "PENDING_SELECTION") {
         setPendingSelection({
-          memberId: id,
+          memberId: cleanId,
           member: result.member,
           subscriptions: result.subscriptions,
         });
         setInputValue("");
+        setIsProcessing(false);
         return;
       }
+
+      setPendingSelection(null);
 
       setLastScanResult(result);
       setInputValue("");
@@ -110,20 +117,16 @@ export function AccessControlPage() {
     } catch (error) {
       console.error("Access request failed", error);
       toast.error("Error processing request");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleSubscriptionSelect = (subscriptionId: number) => {
     if (!pendingSelection) return;
 
-    // Process request first while modal is still technically open (or immediately about to close)
+    // Process request
     handleAccessRequest(pendingSelection.memberId, subscriptionId);
-
-    // Delay unmounting the modal slightly to allow any Radix components
-    // to finish their cleanup (removing pointer-events: none from body)
-    setTimeout(() => {
-      setPendingSelection(null);
-    }, 100);
   };
 
   const handleManualSearch = (e: React.FormEvent) => {
@@ -358,9 +361,10 @@ export function AccessControlPage() {
                     />
                     <Button
                       type="submit"
-                      className="bg-teal-600 hover:bg-teal-700 text-white w-full h-12 text-lg font-bold"
+                      disabled={isProcessing}
+                      className="bg-teal-600 hover:bg-teal-700 text-white w-full h-12 text-lg font-bold disabled:opacity-50"
                     >
-                      Process Access
+                      {isProcessing ? "Processing..." : "Process Access"}
                     </Button>
                   </form>
                 </div>

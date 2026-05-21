@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import successSound from "../../assets/sounds/success.mp3";
 import errorSound from "../../assets/sounds/error.mp3";
 import gymLogo from "../../assets/photo_2026-04-30_12-33-00.jpg";
+import { normalizeBarcode } from "../../utils/barcode";
 
 interface ScanResult {
   status: "GRANTED" | "DENIED" | "PENDING_SELECTION";
@@ -30,12 +31,17 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [pendingSelection, setPendingSelection] = useState<any>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Keep input focused at all times so card scanner input is captured
   useEffect(() => {
     const keepFocus = () => {
-      if (inputRef.current && !pendingSelection) {
+      if (
+        inputRef.current &&
+        !pendingSelection &&
+        document.activeElement?.tagName !== "BUTTON"
+      ) {
         inputRef.current.focus();
       }
     };
@@ -65,11 +71,13 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
   };
 
   const handleScan = async (id: string, subscriptionId?: number) => {
-    if (!id.trim()) return;
+    const cleanId = normalizeBarcode(id);
+    if (!cleanId || isProcessing) return;
 
+    setIsProcessing(true);
     try {
       const result: ScanResult = await window.api.accessLogs.validate({
-        id,
+        id: cleanId,
         type: "CHECK_IN",
         subscriptionId,
       });
@@ -77,13 +85,16 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
       // Handle multiple subscriptions — show picker
       if (result.status === "PENDING_SELECTION") {
         setPendingSelection({
-          memberId: id,
+          memberId: cleanId,
           member: result.member,
           subscriptions: result.subscriptions,
         });
         setInputValue("");
+        setIsProcessing(false);
         return;
       }
+
+      setPendingSelection(null);
 
       // Show result
       setScanResult(result);
@@ -104,6 +115,8 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
       setIsAnimating(true);
       playSound("error");
       setInputValue("");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -115,7 +128,6 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
   const handleSubscriptionSelect = (subscriptionId: number) => {
     if (!pendingSelection) return;
     handleScan(pendingSelection.memberId, subscriptionId);
-    setTimeout(() => setPendingSelection(null), 100);
   };
 
   const isGranted = scanResult?.status === "GRANTED";
@@ -192,7 +204,7 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
           flexDirection: "column",
           alignItems: "center",
           gap: "24px",
-          opacity: scanResult ? 0.15 : 0.6,
+          opacity: (scanResult || isProcessing) ? 0.15 : 0.6,
           transition: "opacity 0.5s ease",
           userSelect: "none",
         }}
@@ -231,6 +243,37 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
           style={{ position: "absolute", left: "-9999px" }}
         />
       </form>
+
+      {/* ========== LOADING OVERLAY ========== */}
+      {isProcessing && !scanResult && !pendingSelection && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 15,
+            background: "rgba(15, 23, 42, 0.4)",
+            backdropFilter: "blur(4px)",
+          }}
+        >
+          <div
+            style={{
+              width: "48px",
+              height: "48px",
+              border: "4px solid rgba(59, 130, 246, 0.3)",
+              borderTopColor: "#3b82f6",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <p style={{ marginTop: "16px", color: "rgba(255, 255, 255, 0.8)", fontWeight: 500 }}>
+            Processing...
+          </p>
+        </div>
+      )}
 
       {/* ========== SCAN RESULT OVERLAY ========== */}
       {scanResult && (
@@ -496,6 +539,9 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
 
       {/* CSS Animations */}
       <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
