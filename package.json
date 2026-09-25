@@ -1,7 +1,9 @@
 {
   "name": "gymapp",
-  "private": true,
   "version": "0.0.1",
+  "description": "Gym Management System Desktop App",
+  "author": "Mohammed Hamadi",
+  "private": true,
   "type": "module",
   "main": "electron/main.js",
   "scripts": {
@@ -92,6 +94,7 @@
   "build": {
     "appId": "com.gymapp.pos",
     "productName": "GymApp",
+    "electronVersion": "34.5.8",
     "directories": {
       "output": "release"
     },
@@ -101,7 +104,10 @@
       "package.json"
     ],
     "asar": true,
-    "compression": "store",
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "compression": "normal",
     "nsis": {
       "oneClick": false,
       "perMachine": true,
@@ -113,8 +119,7 @@
         {
           "target": "nsis",
           "arch": [
-            "x64",
-            "ia32"
+            "x64"
           ]
         }
       ]
