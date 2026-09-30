@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from "react";
+import Barcode from "react-barcode";
 import successSound from "../../assets/sounds/success.mp3";
 import errorSound from "../../assets/sounds/error.mp3";
 import gymLogo from "../../assets/photo_2026-04-30_12-33-00.jpg";
 import { normalizeBarcode } from "../../utils/barcode";
+
+const defaultProfileImage =
+  "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop";
 
 interface ScanResult {
   status: "GRANTED" | "DENIED" | "PENDING_SELECTION";
@@ -10,7 +14,9 @@ interface ScanResult {
     id: string;
     firstName: string;
     lastName: string;
+    phone?: string;
     photoUrl?: string;
+    photo?: string;
   };
   message?: string;
   reason?: string;
@@ -54,13 +60,13 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
     };
   }, [pendingSelection]);
 
-  // Auto-dismiss scan result after 4 seconds
+  // Auto-dismiss scan result after 1 second
   useEffect(() => {
     if (scanResult) {
       const timer = setTimeout(() => {
         setIsAnimating(false);
-        setTimeout(() => setScanResult(null), 400);
-      }, 4000);
+        setScanResult(null);
+      }, 1000);
       return () => clearTimeout(timer);
     }
   }, [scanResult]);
@@ -348,61 +354,257 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
               </h1>
             </div>
 
-            {/* Member Info */}
+            {/* Member Card & Status Info */}
             {scanResult.member && (
               <div
                 style={{
-                  background: "rgba(255, 255, 255, 0.06)",
-                  backdropFilter: "blur(20px)",
-                  borderRadius: "16px",
-                  padding: "20px 40px",
-                  border: `1px solid ${isGranted ? "rgba(74, 222, 128, 0.2)" : "rgba(248, 113, 113, 0.2)"}`,
-                  textAlign: "center",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "14px",
                 }}
               >
-                <p
+                {/* Standard CR80 Member Card */}
+                <div
                   style={{
-                    color: "rgba(255, 255, 255, 0.9)",
-                    fontSize: "22px",
-                    fontWeight: 600,
-                    margin: "0 0 6px 0",
+                    width: "85.6mm",
+                    height: "54mm",
+                    borderRadius: "3.18mm",
+                    padding: "3mm 3.5mm",
+                    boxSizing: "border-box",
+                    background: "#ffffff",
+                    color: "#111827",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    overflow: "hidden",
+                    border: `2px solid ${isGranted ? "#22c55e" : "#ef4444"}`,
+                    boxShadow: isGranted
+                      ? "0 12px 40px rgba(34, 197, 94, 0.35)"
+                      : "0 12px 40px rgba(239, 68, 68, 0.35)",
                   }}
                 >
-                  {scanResult.member.firstName} {scanResult.member.lastName}
-                </p>
-                <p
-                  style={{
-                    color: "rgba(148, 163, 184, 0.8)",
-                    fontSize: "13px",
-                    margin: "0 0 8px 0",
-                    letterSpacing: "1px",
-                  }}
-                >
-                  ID: {scanResult.member.id}
-                </p>
-                {scanResult.subscription && (
-                  <p
+                  {/* Header with Logo */}
+                  <div
                     style={{
-                      color: isGranted ? "#86efac" : "#fca5a5",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      margin: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      paddingBottom: "6px",
+                      borderBottom: "1px solid #e5e7eb",
                     }}
                   >
-                    {scanResult.subscription.planName} • {scanResult.subscription.remainingSessions} sessions left
-                  </p>
-                )}
-                {scanResult.reason && (
-                  <p
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "50%",
+                          overflow: "hidden",
+                          border: "1px solid #e5e7eb",
+                          background: "#f3f4f6",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <img
+                          src={gymLogo}
+                          alt="Gym Logo"
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                        />
+                      </div>
+                      <div style={{ lineHeight: 1 }}>
+                        <h3
+                          style={{
+                            fontSize: "12px",
+                            fontWeight: 800,
+                            color: "#1e3a8a",
+                            letterSpacing: "0.5px",
+                            margin: 0,
+                          }}
+                        >
+                          CROSSTENIX
+                        </h3>
+                        <p
+                          style={{
+                            fontSize: "9px",
+                            color: "#6b7280",
+                            fontWeight: 500,
+                            margin: "2px 0 0 0",
+                          }}
+                        >
+                          Member Card
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: "9px",
+                        fontFamily: "monospace",
+                        fontWeight: 600,
+                        color: "#6b7280",
+                      }}
+                    >
+                      {scanResult.member.id}
+                    </span>
+                  </div>
+
+                  {/* Member Photo & Details */}
+                  <div
                     style={{
-                      color: "#fca5a5",
-                      fontSize: "14px",
-                      fontWeight: 600,
-                      margin: "4px 0 0 0",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      margin: "4px 0",
                     }}
                   >
-                    {scanResult.reason}
-                  </p>
+                    <div
+                      style={{
+                        width: "64px",
+                        height: "64px",
+                        borderRadius: "6px",
+                        overflow: "hidden",
+                        border: "1px solid #e5e7eb",
+                        background: "#f9fafb",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <img
+                        src={
+                          scanResult.member.photo ||
+                          scanResult.member.photoUrl ||
+                          defaultProfileImage
+                        }
+                        alt="Member"
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ marginBottom: "6px" }}>
+                        <p
+                          style={{
+                            fontSize: "7px",
+                            color: "#6b7280",
+                            fontWeight: 700,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                            margin: 0,
+                            lineHeight: 1,
+                          }}
+                        >
+                          Full Name
+                        </p>
+                        <p
+                          style={{
+                            fontSize: "12px",
+                            fontWeight: 700,
+                            color: "#1e3a8a",
+                            margin: "2px 0 0 0",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {scanResult.member.firstName} {scanResult.member.lastName}
+                        </p>
+                      </div>
+                      <div>
+                        <p
+                          style={{
+                            fontSize: "7px",
+                            color: "#6b7280",
+                            fontWeight: 700,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                            margin: 0,
+                            lineHeight: 1,
+                          }}
+                        >
+                          Phone Number
+                        </p>
+                        <p
+                          style={{
+                            fontSize: "10px",
+                            fontWeight: 600,
+                            color: "#1f2937",
+                            margin: "2px 0 0 0",
+                          }}
+                        >
+                          {scanResult.member.phone || "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Barcode */}
+                  <div
+                    style={{
+                      paddingTop: "4px",
+                      borderTop: "1px solid #e5e7eb",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        background: "#ffffff",
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                        border: "1px solid #e5e7eb",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Barcode
+                        value={scanResult.member.id}
+                        format="CODE128"
+                        width={1.2}
+                        height={24}
+                        margin={0}
+                        displayValue={false}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subscription / Reason Badge */}
+                {(scanResult.subscription || scanResult.reason) && (
+                  <div
+                    style={{
+                      background: "rgba(255, 255, 255, 0.06)",
+                      backdropFilter: "blur(20px)",
+                      borderRadius: "12px",
+                      padding: "10px 24px",
+                      border: `1px solid ${isGranted ? "rgba(74, 222, 128, 0.25)" : "rgba(248, 113, 113, 0.25)"}`,
+                      textAlign: "center",
+                    }}
+                  >
+                    {scanResult.subscription && (
+                      <p
+                        style={{
+                          color: isGranted ? "#86efac" : "#fca5a5",
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          margin: 0,
+                        }}
+                      >
+                        {scanResult.subscription.planName} • {scanResult.subscription.remainingSessions} sessions left
+                      </p>
+                    )}
+                    {scanResult.reason && (
+                      <p
+                        style={{
+                          color: "#fca5a5",
+                          fontSize: "14px",
+                          fontWeight: 600,
+                          margin: 0,
+                        }}
+                      >
+                        {scanResult.reason}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             )}

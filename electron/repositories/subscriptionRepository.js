@@ -40,10 +40,10 @@ export const subscriptionRepository = {
   },
 
   getStats: () => {
-    // Active: Marked active AND not physically expired
+    // Active: Marked active AND not physically expired (valid through 24:00 of end_date)
     const activeCount = db
       .prepare(
-        "SELECT COUNT(*) as count FROM subscriptions WHERE status = 'ACTIVE' AND (end_date >= date('now') OR end_date IS NULL)",
+        "SELECT COUNT(*) as count FROM subscriptions WHERE status = 'ACTIVE' AND (date(end_date) >= date('now', 'localtime') OR end_date IS NULL)",
       )
       .get().count;
 
@@ -54,16 +54,16 @@ export const subscriptionRepository = {
         SELECT COUNT(*) as count 
         FROM subscriptions 
         WHERE status = 'ACTIVE' 
-        AND end_date >= date('now')
-        AND end_date <= date('now', '+7 days') 
+        AND date(end_date) >= date('now', 'localtime')
+        AND date(end_date) <= date('now', 'localtime', '+7 days') 
     `,
       )
       .get().count;
 
-    // Expired: Explicitly expired OR Active but past end date
+    // Expired: Explicitly expired OR Active but past end date (after 24:00 of end_date)
     const expiredCount = db
       .prepare(
-        "SELECT COUNT(*) as count FROM subscriptions WHERE status = 'EXPIRED' OR (status = 'ACTIVE' AND end_date < date('now'))",
+        "SELECT COUNT(*) as count FROM subscriptions WHERE status = 'EXPIRED' OR (status = 'ACTIVE' AND date(end_date) < date('now', 'localtime'))",
       )
       .get().count;
 
@@ -73,7 +73,7 @@ export const subscriptionRepository = {
         `
         SELECT COALESCE(SUM(amount), 0) as total 
         FROM transactions 
-        WHERE strftime('%Y-%m', transaction_date) = strftime('%Y-%m', 'now')
+        WHERE strftime('%Y-%m', transaction_date) = strftime('%Y-%m', 'now', 'localtime')
     `,
       )
       .get().total;
@@ -93,8 +93,8 @@ export const subscriptionRepository = {
         LEFT JOIN members m ON s.member_id = m.id
         LEFT JOIN plans p ON s.plan_id = p.id
         WHERE s.status = 'ACTIVE' 
-        AND s.end_date <= date('now', '+7 days') 
-        AND s.end_date >= date('now')
+        AND date(s.end_date) <= date('now', 'localtime', '+7 days') 
+        AND date(s.end_date) >= date('now', 'localtime')
         ORDER BY s.end_date ASC
     `);
     return stmt.all();

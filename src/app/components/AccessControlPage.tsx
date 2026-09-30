@@ -1,5 +1,7 @@
 import successSound from '../../assets/sounds/success.mp3';
 import errorSound from '../../assets/sounds/error.mp3';
+import gymLogo from "../../assets/photo_2026-04-30_12-33-00.jpg";
+import Barcode from "react-barcode";
 import {
   DoorOpen,
   UserCheck,
@@ -16,6 +18,9 @@ import { Badge } from "./ui/badge";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { normalizeBarcode } from "../../utils/barcode";
+
+const defaultProfileImage =
+  "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1000&auto=format&fit=crop";
 
 export function AccessControlPage() {
   const [checkInMode, setCheckInMode] = useState(true);
@@ -35,7 +40,7 @@ export function AccessControlPage() {
     if (lastScanResult) {
       const timer = setTimeout(() => {
         setLastScanResult(null);
-      }, 3000);
+      }, 1000);
       return () => clearTimeout(timer);
     }
   }, [lastScanResult]);
@@ -230,53 +235,131 @@ export function AccessControlPage() {
         </div>
       )}
 
-      {/* Last Scan Result Overlay (Quick Feedback) */}
+      {/* Last Scan Result Overlay (Member Card Display for 1 second) */}
       {lastScanResult && (
         <div
-          className={`fixed top-4 right-4 z-50 p-6 rounded-lg shadow-2xl border-2 animate-in fade-in slide-in-from-top-4 duration-300 ${
+          className={`fixed top-4 right-4 z-50 p-4 rounded-xl shadow-2xl border-2 animate-in fade-in slide-in-from-top-4 duration-300 ${
             lastScanResult.status === "GRANTED"
-              ? "bg-green-50 border-green-500"
-              : "bg-red-50 border-red-500"
+              ? "bg-white border-green-500 shadow-green-500/20"
+              : "bg-white border-red-500 shadow-red-500/20"
           }`}
         >
-          <div className="flex items-center gap-4">
-            {lastScanResult.status === "GRANTED" ? (
-              <CheckCircle className="w-12 h-12 text-green-600" />
-            ) : (
-              <XCircle className="w-12 h-12 text-red-600" />
-            )}
-            <div>
-              <h3
-                className={`text-xl font-bold ${lastScanResult.status === "GRANTED" ? "text-green-900" : "text-red-900"}`}
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-2 self-start w-full justify-between border-b pb-2">
+              <div className="flex items-center gap-2">
+                {lastScanResult.status === "GRANTED" ? (
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-red-600" />
+                )}
+                <span
+                  className={`text-sm font-extrabold uppercase tracking-wide ${
+                    lastScanResult.status === "GRANTED" ? "text-green-700" : "text-red-700"
+                  }`}
+                >
+                  {lastScanResult.status === "GRANTED" ? "Access Granted" : "Access Denied"}
+                </span>
+              </div>
+              <button
+                className="text-gray-400 hover:text-gray-600 text-xs font-bold"
+                onClick={() => setLastScanResult(null)}
               >
-                {lastScanResult.status === "GRANTED"
-                  ? "ACCESS GRANTED"
-                  : "ACCESS DENIED"}
-              </h3>
-              {lastScanResult.member && (
-                <p className="text-gray-700 font-medium">
-                  {lastScanResult.member.firstName}{" "}
-                  {lastScanResult.member.lastName}
-                </p>
-              )}
-              {lastScanResult.subscription && (
-                <p className="text-blue-600 text-sm font-medium">
-                  Plan: {lastScanResult.subscription.planName}
-                </p>
-              )}
-              {lastScanResult.reason && (
-                <p className="text-red-600 font-bold">
-                  {lastScanResult.reason}
-                </p>
-              )}
+                ✕
+              </button>
             </div>
-            <Button
-              variant="ghost"
-              className="ml-4"
-              onClick={() => setLastScanResult(null)}
-            >
-              Close
-            </Button>
+
+            {/* Standard Member Card */}
+            {lastScanResult.member && (
+              <div
+                style={{
+                  width: "85.6mm",
+                  height: "54mm",
+                  borderRadius: "3.18mm",
+                  padding: "3mm 3.5mm",
+                  boxSizing: "border-box",
+                }}
+                className="bg-white border border-gray-200 text-gray-900 flex flex-col justify-between overflow-hidden shadow-sm"
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between pb-1 border-b border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-200 shrink-0">
+                      <img src={gymLogo} alt="Logo" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="leading-tight">
+                      <p className="text-[11px] font-extrabold text-blue-900">CROSSTENIX</p>
+                      <p className="text-[8px] text-gray-500 font-medium">Member Card</p>
+                    </div>
+                  </div>
+                  <span className="text-[8px] font-mono font-semibold text-gray-500">
+                    {lastScanResult.member.id}
+                  </span>
+                </div>
+
+                {/* Body: Photo + Info */}
+                <div className="flex items-center gap-2.5 my-0.5">
+                  <div className="w-14 h-14 bg-gray-50 rounded overflow-hidden border border-gray-200 shrink-0">
+                    <img
+                      src={
+                        lastScanResult.member.photo ||
+                        lastScanResult.member.photoUrl ||
+                        defaultProfileImage
+                      }
+                      alt="Member"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <div>
+                      <p className="text-[6.5px] text-gray-500 font-bold uppercase tracking-wider leading-none">
+                        Full Name
+                      </p>
+                      <p className="text-[11px] font-bold text-blue-900 truncate leading-tight">
+                        {lastScanResult.member.firstName} {lastScanResult.member.lastName}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[6.5px] text-gray-500 font-bold uppercase tracking-wider leading-none">
+                        Phone Number
+                      </p>
+                      <p className="text-[9px] font-semibold text-gray-800 truncate leading-tight">
+                        {lastScanResult.member.phone || "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Barcode */}
+                <div className="pt-0.5 border-t border-gray-200 flex items-center justify-center">
+                  <div className="bg-white px-2 py-0.5 rounded border border-gray-100 flex items-center justify-center">
+                    <Barcode
+                      value={lastScanResult.member.id}
+                      format="CODE128"
+                      width={1.1}
+                      height={20}
+                      margin={0}
+                      displayValue={false}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Subscription / Reason Message */}
+            {(lastScanResult.subscription || lastScanResult.reason) && (
+              <div className="text-center text-xs">
+                {lastScanResult.subscription && (
+                  <p className="text-blue-700 font-semibold">
+                    {lastScanResult.subscription.planName} • {lastScanResult.subscription.remainingSessions} sessions left
+                  </p>
+                )}
+                {lastScanResult.reason && (
+                  <p className="text-red-600 font-bold">
+                    {lastScanResult.reason}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

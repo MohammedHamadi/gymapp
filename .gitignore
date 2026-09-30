@@ -76,6 +76,8 @@ dist/
 
 # Database
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 
 # Electron Build Folders

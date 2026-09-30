@@ -27,7 +27,7 @@ export const accessLogRepository = {
 
   getRecentLogs: (limit = 50) => {
     const stmt = db.prepare(`
-      SELECT al.*, m.first_name, m.last_name, m.photo_url, p.name as plan_name
+      SELECT al.*, m.first_name, m.last_name, COALESCE(m.photo_url, m.photo) as photo_url, p.name as plan_name
       FROM access_logs al
       JOIN members m ON al.member_id = m.id
       LEFT JOIN subscriptions s ON al.subscription_id = s.id
@@ -40,7 +40,7 @@ export const accessLogRepository = {
 
   getCurrentlyInside: () => {
     const stmt = db.prepare(`
-      SELECT m.id, m.first_name, m.last_name, m.photo_url, al.timestamp as check_in_time
+      SELECT m.id, m.first_name, m.last_name, COALESCE(m.photo_url, m.photo) as photo_url, al.timestamp as check_in_time
       FROM members m
       JOIN access_logs al ON m.id = al.member_id
       WHERE al.id = (

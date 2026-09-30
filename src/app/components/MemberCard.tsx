@@ -1,6 +1,7 @@
 import Barcode from "react-barcode";
 import { X } from "lucide-react";
 import { Button } from "./ui/button";
+import gymLogoUrl from "../../assets/photo_2026-04-30_12-33-00.jpg";
 
 // Placeholder if no photo is available
 const defaultProfileImage =
@@ -21,8 +22,6 @@ interface MemberCardProps {
 }
 
 export function MemberCard({ memberData, onClose }: MemberCardProps) {
-  const gymLogoUrl =
-    "https://images.unsplash.com/photo-1711623350090-4f98efcb5acc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxneW0lMjBsb2dvJTIwZml0bmVzc3xlbnwxfHx8fDE3NjY4NjA4MjF8MA&ixlib=rb-4.1.0&q=80&w=1080";
 
   const handlePrint = () => {
     window.print();
@@ -47,9 +46,9 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full p-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-blue-900">
+      <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6">
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="text-xl font-bold text-blue-900">
             Member Card Generated
           </h2>
           <button
@@ -60,75 +59,88 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
           </button>
         </div>
 
-        {/* --- MODIFIED MEMBER CARD --- */}
-        <div
-          id="memberCard"
-          className="bg-white rounded-2xl p-8 shadow-xl border-2 border-gray-200 text-gray-900 mb-6"
-        >
-          {/* Header with Logo */}
-          <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="w-16 h-16 bg-gray-100 rounded-full overflow-hidden border border-gray-200">
-                <img
-                  src={gymLogoUrl}
-                  alt="Gym Logo"
-                  className="w-full h-full object-cover"
-                />
+        {/* --- STANDARD CR80 / ID-1 CARD (85.6mm x 54mm) --- */}
+        <div className="flex justify-center mb-6">
+          <div
+            id="memberCard"
+            style={{
+              width: "85.6mm",
+              height: "54mm",
+              borderRadius: "3.18mm",
+              padding: "3mm 3.5mm",
+              boxSizing: "border-box",
+            }}
+            className="bg-white shadow-xl border border-gray-300 text-gray-900 flex flex-col justify-between overflow-hidden"
+          >
+            {/* Header with Logo */}
+            <div className="flex items-center justify-between pb-1.5 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 bg-gray-100 rounded-full overflow-hidden border border-gray-200 shrink-0">
+                  <img
+                    src={gymLogoUrl}
+                    alt="Gym Logo"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="leading-none">
+                  <h3 className="text-xs font-extrabold text-blue-900 tracking-wide">
+                    CROSSTENIX
+                  </h3>
+                  <p className="text-[9px] text-gray-500 font-medium">
+                    Member Card
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-blue-900">CROSSTENIX</h3>
-                <p className="text-sm text-gray-500 font-medium">Member Card</p>
-              </div>
+              <span className="text-[9px] font-mono font-semibold text-gray-500">
+                {memberData.id}
+              </span>
             </div>
-          </div>
 
-          {/* Member Info */}
-          <div className="grid grid-cols-3 gap-6">
-            {/* Photo */}
-            <div className="col-span-1">
-              <div className="w-32 h-32 bg-gray-50 rounded-lg overflow-hidden border-2 border-gray-200 shadow-sm">
+            {/* Member Info */}
+            <div className="flex items-center gap-3 my-1">
+              {/* Photo */}
+              <div className="w-16 h-16 bg-gray-50 rounded-md overflow-hidden border border-gray-200 shadow-xs shrink-0">
                 <img
                   src={getProfileImage()}
                   alt="Member"
                   className="w-full h-full object-cover"
                 />
               </div>
+
+              {/* Details */}
+              <div className="flex-1 min-w-0 space-y-1">
+                <div>
+                  <p className="text-[7px] text-gray-500 font-bold uppercase tracking-wider leading-none">
+                    Full Name
+                  </p>
+                  <p className="text-xs font-bold text-blue-900 truncate leading-tight">
+                    {memberData.firstName} {memberData.lastName}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[7px] text-gray-500 font-bold uppercase tracking-wider leading-none">
+                    Phone Number
+                  </p>
+                  <p className="text-[10px] font-semibold text-gray-800 truncate leading-tight">
+                    {memberData.phone}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            {/* Details */}
-            <div className="col-span-2 space-y-3">
-              <div>
-                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Full Name</p>
-                <p className="text-xl font-bold text-blue-900">
-                  {memberData.firstName} {memberData.lastName}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Phone Number</p>
-                <p className="font-semibold text-gray-800">{memberData.phone}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Valid From</p>
-                <p className="font-semibold text-gray-800">{memberData.startDate}</p>
+            {/* Barcode Section */}
+            <div className="pt-1 border-t border-gray-200 flex items-center justify-center">
+              <div className="bg-white px-2 py-0.5 rounded border border-gray-200 flex items-center justify-center">
+                <Barcode
+                  value={memberData.id}
+                  format="CODE128"
+                  width={1.2}
+                  height={24}
+                  margin={0}
+                  displayValue={false}
+                />
               </div>
             </div>
-          </div>
-
-          {/* QR Code Section (Dark Box Removed) */}
-          <div className="mt-6 pt-4 border-t-2 border-gray-100 flex items-center justify-between">
-            <div className="bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
-              <Barcode
-                value={memberData.id}
-                format="CODE128"
-                width={1.5}
-                height={60}
-                fontSize={14}
-                displayValue={false}
-              />
-            </div>
-            
-            {/* The dark square code that used to be right here is completely gone! */}
-
           </div>
         </div>
 

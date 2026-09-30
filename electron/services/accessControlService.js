@@ -19,11 +19,24 @@ export const accessControlService = {
       };
     }
 
+    let photoData = member.photo_url || null;
+    if (member.photo) {
+      if (typeof member.photo === "string") {
+        photoData = member.photo.startsWith("data:")
+          ? member.photo
+          : `data:image/jpeg;base64,${member.photo}`;
+      } else if (Buffer.isBuffer(member.photo)) {
+        photoData = `data:image/jpeg;base64,${member.photo.toString("base64")}`;
+      }
+    }
+
     const memberInfo = {
       id: member.id,
       firstName: member.first_name,
       lastName: member.last_name,
-      photoUrl: member.photo_url,
+      phone: member.phone,
+      photoUrl: photoData,
+      photo: photoData,
     };
 
     // 2. Handle Check-Out (Always granted if member exists)
@@ -88,8 +101,14 @@ export const accessControlService = {
       sub = activeSubs[0];
     }
 
-    // D. Deny if end_date passed OR remaining_sessions is 0
-    const isExpired = sub.end_date && new Date(sub.end_date) < new Date();
+    // D. Deny if end_date passed (after 24:00 / 23:59:59.999 of end_date) OR remaining_sessions is 0
+    let isExpired = false;
+    if (sub.end_date) {
+      const datePart = String(sub.end_date).split("T")[0];
+      const [year, month, day] = datePart.split("-").map(Number);
+      const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+      isExpired = new Date() > endOfDay;
+    }
     const noSessions =
       sub.remaining_sessions !== null && sub.remaining_sessions <= 0;
 

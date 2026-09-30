@@ -82,7 +82,7 @@
   }
 
   /* =======================================
-     MEMBER CARD PRINTING
+     MEMBER CARD PRINTING (Standard CR80 / ID-1: 85.6mm x 54mm)
      ======================================= */
   #memberCard,
   #memberCard * {
@@ -95,8 +95,14 @@
     top: 5mm !important;
     transform: none !important;
     margin: 0 !important;
-    width: 100% !important;
-    max-width: 500px !important;
+    width: 85.6mm !important;
+    height: 54mm !important;
+    min-width: 85.6mm !important;
+    max-width: 85.6mm !important;
+    min-height: 54mm !important;
+    max-height: 54mm !important;
+    border-radius: 3.18mm !important;
+    box-sizing: border-box !important;
 
     /* Never split the card across pages */
     page-break-inside: avoid !important;
