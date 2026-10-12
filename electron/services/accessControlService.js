@@ -139,14 +139,21 @@ export const accessControlService = {
       status: "GRANTED",
     });
 
+    const remainingSessions =
+      sub.remaining_sessions !== null ? sub.remaining_sessions - 1 : null;
+    const isAboutToEnd =
+      remainingSessions !== null && remainingSessions <= 1;
+
     return {
       status: "GRANTED",
       member: memberInfo,
-      message: "Access granted",
+      message: isAboutToEnd ? "Sessions about to end" : "Access granted",
+      warning: isAboutToEnd ? "Sessions about to end" : null,
       subscription: {
         id: sub.id,
         planName: sub.plan_name,
-        remainingSessions: sub.remaining_sessions - 1,
+        remainingSessions,
+        isAboutToEnd,
       },
     };
   },

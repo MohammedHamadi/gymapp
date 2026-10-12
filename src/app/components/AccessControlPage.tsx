@@ -40,7 +40,7 @@ export function AccessControlPage() {
     if (lastScanResult) {
       const timer = setTimeout(() => {
         setLastScanResult(null);
-      }, 1000);
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [lastScanResult]);
@@ -108,10 +108,17 @@ export function AccessControlPage() {
 
       if (result.status === "GRANTED") {
         new Audio(successSound).play().catch(e => console.log("Audio error:", e));
-        toast.success(result.message || "Access Granted", {
-          description: `Member: ${result.member.firstName} ${result.member.lastName}`,
-          duration: 3000,
-        });
+        if (result.warning) {
+          toast.warning(result.warning, {
+            description: `Member: ${result.member.firstName} ${result.member.lastName} (${result.subscription?.remainingSessions ?? 0} left)`,
+            duration: 4000,
+          });
+        } else {
+          toast.success(result.message || "Access Granted", {
+            description: `Member: ${result.member.firstName} ${result.member.lastName}`,
+            duration: 3000,
+          });
+        }
       } else {
         new Audio(errorSound).play().catch(e => console.log("Audio error:", e));
         toast.error("Access Denied", {
@@ -347,11 +354,21 @@ export function AccessControlPage() {
 
             {/* Subscription / Reason Message */}
             {(lastScanResult.subscription || lastScanResult.reason) && (
-              <div className="text-center text-xs">
+              <div className="text-center text-xs space-y-1">
                 {lastScanResult.subscription && (
-                  <p className="text-blue-700 font-semibold">
-                    {lastScanResult.subscription.planName} • {lastScanResult.subscription.remainingSessions} sessions left
-                  </p>
+                  <div>
+                    <p className="text-blue-700 font-semibold">
+                      {lastScanResult.subscription.planName} • {lastScanResult.subscription.remainingSessions}{" "}
+                      {lastScanResult.subscription.remainingSessions === 1 ? "session" : "sessions"} left
+                    </p>
+                    {(lastScanResult.subscription.isAboutToEnd ||
+                      (lastScanResult.subscription.remainingSessions !== null &&
+                        lastScanResult.subscription.remainingSessions <= 1)) && (
+                      <p className="text-amber-600 font-bold text-[11px] mt-0.5">
+                        ⚠️ Sessions about to end — Please renew soon
+                      </p>
+                    )}
+                  </div>
                 )}
                 {lastScanResult.reason && (
                   <p className="text-red-600 font-bold">

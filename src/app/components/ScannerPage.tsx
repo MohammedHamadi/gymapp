@@ -20,10 +20,12 @@ interface ScanResult {
   };
   message?: string;
   reason?: string;
+  warning?: string;
   subscription?: {
     id: number;
     planName: string;
-    remainingSessions: number;
+    remainingSessions: number | null;
+    isAboutToEnd?: boolean;
   };
   subscriptions?: any[];
 }
@@ -60,13 +62,13 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
     };
   }, [pendingSelection]);
 
-  // Auto-dismiss scan result after 1 second
+  // Auto-dismiss scan result after 3 seconds
   useEffect(() => {
     if (scanResult) {
       const timer = setTimeout(() => {
         setIsAnimating(false);
         setScanResult(null);
-      }, 1000);
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [scanResult]);
@@ -137,6 +139,13 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
   };
 
   const isGranted = scanResult?.status === "GRANTED";
+  const remainingSessions = scanResult?.subscription?.remainingSessions;
+  const isAboutToEnd =
+    isGranted &&
+    (Boolean(scanResult?.subscription?.isAboutToEnd) ||
+      (remainingSessions !== null &&
+        remainingSessions !== undefined &&
+        remainingSessions <= 1));
 
   return (
     <div
@@ -336,7 +345,15 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
             </div>
 
             {/* Status Text */}
-            <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "10px",
+              }}
+            >
               <h1
                 style={{
                   fontSize: "42px",
@@ -352,6 +369,47 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
               >
                 {isGranted ? "Access Succeeded" : "Access Denied"}
               </h1>
+
+              {/* Sessions about to end warning */}
+              {isAboutToEnd && (
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    background: "rgba(245, 158, 11, 0.2)",
+                    border: "1.5px solid #f59e0b",
+                    color: "#fef08a",
+                    padding: "6px 20px",
+                    borderRadius: "9999px",
+                    fontSize: "15px",
+                    fontWeight: 700,
+                    letterSpacing: "0.5px",
+                    boxShadow: "0 0 25px rgba(245, 158, 11, 0.35)",
+                  }}
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#fbbf24"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  <span>
+                    Sessions about to end
+                    {remainingSessions !== null && remainingSessions !== undefined
+                      ? ` (${remainingSessions} ${remainingSessions === 1 ? "session" : "sessions"} left)`
+                      : ""}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Member Card & Status Info */}
@@ -572,24 +630,53 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
                 {(scanResult.subscription || scanResult.reason) && (
                   <div
                     style={{
-                      background: "rgba(255, 255, 255, 0.06)",
+                      background: isAboutToEnd
+                        ? "rgba(245, 158, 11, 0.15)"
+                        : "rgba(255, 255, 255, 0.06)",
                       backdropFilter: "blur(20px)",
                       borderRadius: "12px",
                       padding: "10px 24px",
-                      border: `1px solid ${isGranted ? "rgba(74, 222, 128, 0.25)" : "rgba(248, 113, 113, 0.25)"}`,
+                      border: `1px solid ${
+                        isAboutToEnd
+                          ? "rgba(245, 158, 11, 0.55)"
+                          : isGranted
+                          ? "rgba(74, 222, 128, 0.25)"
+                          : "rgba(248, 113, 113, 0.25)"
+                      }`,
                       textAlign: "center",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                      alignItems: "center",
                     }}
                   >
                     {scanResult.subscription && (
                       <p
                         style={{
-                          color: isGranted ? "#86efac" : "#fca5a5",
+                          color: isAboutToEnd
+                            ? "#fbbf24"
+                            : isGranted
+                            ? "#86efac"
+                            : "#fca5a5",
                           fontSize: "14px",
                           fontWeight: 600,
                           margin: 0,
                         }}
                       >
-                        {scanResult.subscription.planName} • {scanResult.subscription.remainingSessions} sessions left
+                        {scanResult.subscription.planName} • {scanResult.subscription.remainingSessions}{" "}
+                        {scanResult.subscription.remainingSessions === 1 ? "session" : "sessions"} left
+                      </p>
+                    )}
+                    {isAboutToEnd && (
+                      <p
+                        style={{
+                          color: "#fef08a",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          margin: 0,
+                        }}
+                      >
+                        ⚠️ Sessions about to end — Please renew soon
                       </p>
                     )}
                     {scanResult.reason && (

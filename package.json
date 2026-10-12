@@ -1,6 +1,6 @@
 {
   "name": "gymapp",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Gym Management System Desktop App",
   "author": "Mohammed Hamadi",
   "private": true,
@@ -112,7 +112,7 @@
       "oneClick": false,
       "perMachine": true,
       "allowToChangeInstallationDirectory": true,
-      "deleteAppDataOnUninstall": true
+      "deleteAppDataOnUninstall": false
     },
     "win": {
       "target": [
