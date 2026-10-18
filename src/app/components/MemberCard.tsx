@@ -1,5 +1,5 @@
 import Barcode from "react-barcode";
-import { X } from "lucide-react";
+import { X, Instagram } from "lucide-react";
 import { Button } from "./ui/button";
 import gymLogoUrl from "../../assets/photo_2026-04-30_12-33-00.jpg";
 
@@ -73,7 +73,7 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
             className="bg-white shadow-xl border border-gray-300 text-gray-900 flex flex-col justify-between overflow-hidden"
           >
             {/* Header with Logo */}
-            <div className="flex items-center justify-between pb-1.5 border-b border-gray-200">
+            <div className="relative flex items-center justify-between pb-1.5 border-b border-gray-200">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 bg-gray-100 rounded-full overflow-hidden border border-gray-200 shrink-0">
                   <img
@@ -84,13 +84,36 @@ export function MemberCard({ memberData, onClose }: MemberCardProps) {
                 </div>
                 <div className="leading-none">
                   <h3 className="text-xs font-extrabold text-blue-900 tracking-wide">
-                    CROSSTENIX
+                    CROSSTHENICS
                   </h3>
                   <p className="text-[9px] text-gray-500 font-medium">
                     Member Card
                   </p>
                 </div>
               </div>
+
+              {/* Instagram Logo in the middle up */}
+              <div
+                className="absolute left-1/2 flex items-center justify-center pointer-events-none"
+                style={{ top: "50%", transform: "translate(-50%, -50%)" }}
+              >
+                <div
+                  style={{
+                    width: "20px",
+                    height: "20px",
+                    borderRadius: "5px",
+                    background:
+                      "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                  }}
+                >
+                  <Instagram className="w-3.5 h-3.5 text-white" strokeWidth={2.2} />
+                </div>
+              </div>
+
               <span className="text-[9px] font-mono font-semibold text-gray-500">
                 {memberData.id}
               </span>

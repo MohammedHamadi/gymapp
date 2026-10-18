@@ -11,6 +11,7 @@ import {
   CheckCircle,
   XCircle,
   CreditCard,
+  Instagram,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -106,12 +107,24 @@ export function AccessControlPage() {
       fetchLogs();
       fetchStats();
 
+      const hasOneOrLessSessions =
+        result.subscription &&
+        ((result.subscription.remainingSessions !== null &&
+          result.subscription.remainingSessions !== undefined &&
+          result.subscription.remainingSessions <= 1) ||
+          Boolean(result.subscription.isAboutToEnd));
+
       if (result.status === "GRANTED") {
-        new Audio(successSound).play().catch(e => console.log("Audio error:", e));
-        if (result.warning) {
-          toast.warning(result.warning, {
+        if (hasOneOrLessSessions) {
+          new Audio(errorSound).play().catch(e => console.log("Audio error:", e));
+        } else {
+          new Audio(successSound).play().catch(e => console.log("Audio error:", e));
+        }
+
+        if (result.warning || hasOneOrLessSessions) {
+          toast.error(result.warning || "Sessions about to end", {
             description: `Member: ${result.member.firstName} ${result.member.lastName} (${result.subscription?.remainingSessions ?? 0} left)`,
-            duration: 4000,
+            duration: 5000,
           });
         } else {
           toast.success(result.message || "Access Granted", {
@@ -288,7 +301,7 @@ export function AccessControlPage() {
                 className="bg-white border border-gray-200 text-gray-900 flex flex-col justify-between overflow-hidden shadow-sm"
               >
                 {/* Header */}
-                <div className="flex items-center justify-between pb-1 border-b border-gray-200">
+                <div className="relative flex items-center justify-between pb-1 border-b border-gray-200">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full overflow-hidden border border-gray-200 shrink-0">
                       <img src={gymLogo} alt="Logo" className="w-full h-full object-cover" />
@@ -298,6 +311,29 @@ export function AccessControlPage() {
                       <p className="text-[8px] text-gray-500 font-medium">Member Card</p>
                     </div>
                   </div>
+
+                  {/* Instagram Logo in the middle up */}
+                  <div
+                    className="absolute left-1/2 flex items-center justify-center pointer-events-none"
+                    style={{ top: "50%", transform: "translate(-50%, -50%)" }}
+                  >
+                    <div
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "4px",
+                        background:
+                          "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                      }}
+                    >
+                      <Instagram className="w-3 h-3 text-white" strokeWidth={2.2} />
+                    </div>
+                  </div>
+
                   <span className="text-[8px] font-mono font-semibold text-gray-500">
                     {lastScanResult.member.id}
                   </span>
@@ -357,14 +393,21 @@ export function AccessControlPage() {
               <div className="text-center text-xs space-y-1">
                 {lastScanResult.subscription && (
                   <div>
-                    <p className="text-blue-700 font-semibold">
+                    <p
+                      className={
+                        lastScanResult.subscription.remainingSessions !== null &&
+                        lastScanResult.subscription.remainingSessions <= 1
+                          ? "text-red-600 font-bold"
+                          : "text-blue-700 font-semibold"
+                      }
+                    >
                       {lastScanResult.subscription.planName} • {lastScanResult.subscription.remainingSessions}{" "}
                       {lastScanResult.subscription.remainingSessions === 1 ? "session" : "sessions"} left
                     </p>
                     {(lastScanResult.subscription.isAboutToEnd ||
                       (lastScanResult.subscription.remainingSessions !== null &&
                         lastScanResult.subscription.remainingSessions <= 1)) && (
-                      <p className="text-amber-600 font-bold text-[11px] mt-0.5">
+                      <p className="text-red-600 font-bold text-[11px] mt-0.5">
                         ⚠️ Sessions about to end — Please renew soon
                       </p>
                     )}

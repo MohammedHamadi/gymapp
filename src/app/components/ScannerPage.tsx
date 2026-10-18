@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Barcode from "react-barcode";
+import { Instagram } from "lucide-react";
 import successSound from "../../assets/sounds/success.mp3";
 import errorSound from "../../assets/sounds/error.mp3";
 import gymLogo from "../../assets/photo_2026-04-30_12-33-00.jpg";
@@ -109,8 +110,19 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
       setIsAnimating(true);
       setInputValue("");
 
+      const hasOneOrLessSessions =
+        result.subscription &&
+        ((result.subscription.remainingSessions !== null &&
+          result.subscription.remainingSessions !== undefined &&
+          result.subscription.remainingSessions <= 1) ||
+          Boolean(result.subscription.isAboutToEnd));
+
       if (result.status === "GRANTED") {
-        playSound("success");
+        if (hasOneOrLessSessions) {
+          playSound("error");
+        } else {
+          playSound("success");
+        }
       } else {
         playSound("error");
       }
@@ -377,15 +389,15 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
                     display: "inline-flex",
                     alignItems: "center",
                     gap: "8px",
-                    background: "rgba(245, 158, 11, 0.2)",
-                    border: "1.5px solid #f59e0b",
-                    color: "#fef08a",
+                    background: "rgba(220, 38, 38, 0.25)",
+                    border: "1.5px solid #ef4444",
+                    color: "#fecaca",
                     padding: "6px 20px",
                     borderRadius: "9999px",
                     fontSize: "15px",
                     fontWeight: 700,
                     letterSpacing: "0.5px",
-                    boxShadow: "0 0 25px rgba(245, 158, 11, 0.35)",
+                    boxShadow: "0 0 25px rgba(239, 68, 68, 0.45)",
                   }}
                 >
                   <svg
@@ -393,7 +405,7 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
                     height="18"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="#fbbf24"
+                    stroke="#ef4444"
                     strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -402,7 +414,7 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
                     <line x1="12" y1="9" x2="12" y2="13" />
                     <line x1="12" y1="17" x2="12.01" y2="17" />
                   </svg>
-                  <span>
+                  <span style={{ color: "#fca5a5" }}>
                     Sessions about to end
                     {remainingSessions !== null && remainingSessions !== undefined
                       ? ` (${remainingSessions} ${remainingSessions === 1 ? "session" : "sessions"} left)`
@@ -445,6 +457,7 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
                   {/* Header with Logo */}
                   <div
                     style={{
+                      position: "relative",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
@@ -494,6 +507,37 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
                         </p>
                       </div>
                     </div>
+
+                    {/* Instagram Logo in the middle up */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: "50%",
+                        top: "50%",
+                        transform: "translate(-50%, -50%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "20px",
+                          height: "20px",
+                          borderRadius: "5px",
+                          background:
+                            "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                        }}
+                      >
+                        <Instagram size={13} color="white" strokeWidth={2.2} />
+                      </div>
+                    </div>
+
                     <span
                       style={{
                         fontSize: "9px",
@@ -631,14 +675,14 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
                   <div
                     style={{
                       background: isAboutToEnd
-                        ? "rgba(245, 158, 11, 0.15)"
+                        ? "rgba(220, 38, 38, 0.18)"
                         : "rgba(255, 255, 255, 0.06)",
                       backdropFilter: "blur(20px)",
                       borderRadius: "12px",
                       padding: "10px 24px",
                       border: `1px solid ${
                         isAboutToEnd
-                          ? "rgba(245, 158, 11, 0.55)"
+                          ? "rgba(239, 68, 68, 0.6)"
                           : isGranted
                           ? "rgba(74, 222, 128, 0.25)"
                           : "rgba(248, 113, 113, 0.25)"
@@ -654,7 +698,7 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
                       <p
                         style={{
                           color: isAboutToEnd
-                            ? "#fbbf24"
+                            ? "#fca5a5"
                             : isGranted
                             ? "#86efac"
                             : "#fca5a5",
@@ -670,7 +714,7 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
                     {isAboutToEnd && (
                       <p
                         style={{
-                          color: "#fef08a",
+                          color: "#ef4444",
                           fontSize: "13px",
                           fontWeight: 700,
                           margin: 0,
