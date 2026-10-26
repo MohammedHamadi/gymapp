@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { app } from "electron";
 import { fileURLToPath } from "url";
+import { upgradeSubscriptions } from "./subscriptionState.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,5 +22,7 @@ db.pragma("journal_mode = WAL");
 const schemaPath = path.join(__dirname, "schema.sql");
 const schema = fs.readFileSync(schemaPath, "utf8");
 db.exec(schema);
+
+upgradeSubscriptions(db, `${dbPath}.before-subscription-fix-${Date.now()}.db`);
 
 export default db;

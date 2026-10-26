@@ -58,7 +58,7 @@ export function PlansPage() {
           fetchPlans(); // Refresh list
         } catch (error) {
           console.error("Error deleting plan:", error);
-          alert("Failed to delete plan");
+          alert(error instanceof Error ? error.message : "Failed to delete plan");
         }
         setConfirmConfig(null);
       },

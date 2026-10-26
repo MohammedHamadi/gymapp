@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { localDate, renewalValues } from "../../../shared/subscriptionRules.js";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -20,7 +21,7 @@ import {
 interface RenewSubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRenew: (data: any) => void;
+  onRenew: (data: any) => void | Promise<void>;
   member: any;
   currentPlanId?: string; // Optional: prepopulate with current plan
 }
@@ -34,87 +35,73 @@ export function RenewSubscriptionModal({
 }: RenewSubscriptionModalProps) {
   const [plans, setPlans] = useState<any[]>([]);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
-  const [endDate, setEndDate] = useState("");
+  const [startDate, setStartDate] = useState(localDate);
   const [price, setPrice] = useState("");
-  const [duration, setDuration] = useState("");
-  const [remainingSessions, setRemainingSessions] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
+  const selectedPlan = plans.find((plan) => String(plan.id) === selectedPlanId);
+  const values = selectedPlan ? renewalValues(selectedPlan, startDate) : null;
+  const endDate = values?.endDate || "";
 
   useEffect(() => {
-    if (isOpen) {
-      loadPlans();
-      if (currentPlanId) {
-        setSelectedPlanId(currentPlanId);
+    if (!isOpen) return;
+    let cancelled = false;
+    setStartDate(localDate());
+    setSelectedPlanId("");
+    setPrice("");
+    window.api.plans.getAll().then((data) => {
+      if (cancelled) return;
+      const active = data.filter((plan: any) => plan.is_active);
+      setPlans(active);
+      setSelectedPlanId(active.some((plan: any) => String(plan.id) === currentPlanId) ? currentPlanId! : "");
+    }).catch((error) => {
+      if (!cancelled) {
+        setPlans([]);
+        alert("Failed to load plans. Close and reopen the renewal form.");
       }
-    }
-  }, [isOpen, currentPlanId]);
-
-  // Effect to handle plan change logic (populate price/duration)
-  useEffect(() => {
-    if (selectedPlanId && plans.length > 0) {
-      const plan = plans.find((p) => p.id.toString() === selectedPlanId);
-      if (plan) {
-        setPrice(plan.price.toString());
-        if (plan.duration_days) {
-          setDuration(plan.duration_days.toString());
-          setEndDate(calculateEndDate(startDate, plan.duration_days));
-        } else {
-          setDuration("");
-          setEndDate("");
-        }
-        setRemainingSessions(
-          plan.session_count ? plan.session_count.toString() : "",
-        );
-      }
-    }
-  }, [selectedPlanId, plans, startDate]);
-
-  const loadPlans = async () => {
-    try {
-      const data = await window.api.plans.getAll();
-      setPlans(data.filter((p: any) => p.is_active));
-    } catch (error) {
       console.error("Failed to load plans", error);
-    }
-  };
+    });
+    return () => { cancelled = true; };
+  }, [isOpen, currentPlanId, member?.id]);
 
-  const calculateEndDate = (start: string, days: number) => {
-    if (!start || !days) return "";
-    const date = new Date(start);
-    date.setDate(date.getDate() + days);
-    return date.toISOString().split("T")[0];
-  };
+  useEffect(() => {
+    setPrice(selectedPlan ? String(selectedPlan.price) : "");
+  }, [selectedPlan]);
 
-  const handleRenew = () => {
-    if (!selectedPlanId) {
-      alert("Please select a plan.");
+  const handleRenew = async () => {
+    if (savingRef.current) return;
+    if (!selectedPlan || !values) {
+      alert("Please select an active plan.");
       return;
     }
-
-    onRenew({
-      planId: parseInt(selectedPlanId),
-      startDate,
-      endDate: endDate || null,
-      remainingSessions: remainingSessions ? parseInt(remainingSessions) : 0,
-      pricePaid: price ? parseFloat(price) : 0,
-      status: "ACTIVE",
-      autoRenew: 0,
-    });
-    onClose();
+    savingRef.current = true;
+    setIsSaving(true);
+    try {
+      await onRenew({
+        planId: selectedPlan.id, ...values,
+        pricePaid: price === "" ? null : Number(price),
+        status: "ACTIVE", autoRenew: 0,
+      });
+      onClose();
+    } catch {
+      // Keep the form open when the parent reports a failure.
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
+    }
   };
 
   if (!member) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => { if (!savingRef.current) onClose(); }}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>
             Renew Subscription for {member.firstName} {member.lastName}
           </DialogTitle>
         </DialogHeader>
+        <p className="text-sm text-gray-500">Renewing immediately replaces the current subscription. Unused days and sessions do not carry over.</p>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="plan" className="text-right">
@@ -176,15 +163,16 @@ export function RenewSubscriptionModal({
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
           <Button
             type="submit"
             onClick={handleRenew}
+            disabled={isSaving || !selectedPlan}
             className="bg-green-600 hover:bg-green-700"
           >
-            Renew
+            {isSaving ? "Renewing..." : "Renew"}
           </Button>
         </DialogFooter>
       </DialogContent>

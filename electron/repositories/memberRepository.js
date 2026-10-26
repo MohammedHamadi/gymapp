@@ -1,12 +1,15 @@
 import db from "../db/client.js";
+import { expireSubscriptions } from "../db/subscriptionState.js";
 
 export const memberRepository = {
   findAll: () => {
+    expireSubscriptions(db);
     // Efficient "Latest" retrieval in SQLite:
     const stmt = db.prepare(`
         SELECT 
             m.id, m.first_name, m.last_name, m.phone, m.email, m.qr_code, m.photo_url, m.photo, m.created_at,
             s.id as subscription_id,
+            s.plan_id, s.price_paid, s.auto_renew,
             s.status as subscription_status,
             s.start_date as subscription_start_date,
             s.end_date as subscription_end_date,
@@ -17,7 +20,7 @@ export const memberRepository = {
         LEFT JOIN subscriptions s ON s.id = (
             SELECT id FROM subscriptions 
             WHERE member_id = m.id 
-            ORDER BY created_at DESC 
+            ORDER BY (status = 'ACTIVE') DESC, id DESC
             LIMIT 1
         )
         LEFT JOIN plans p ON s.plan_id = p.id
@@ -37,6 +40,9 @@ export const memberRepository = {
       subscription: row.subscription_id
         ? {
             id: row.subscription_id,
+            planId: row.plan_id,
+            pricePaid: row.price_paid,
+            autoRenew: row.auto_renew,
             status: row.subscription_status,
             startDate: row.subscription_start_date,
             endDate: row.subscription_end_date,
@@ -53,11 +59,17 @@ export const memberRepository = {
     return stmt.get(id);
   },
 
+  findByBarcode: (barcode) => {
+    return db.prepare("SELECT * FROM members WHERE id = @barcode OR qr_code = @barcode ORDER BY (id = @barcode) DESC LIMIT 1").get({ barcode });
+  },
+
   findByIdWithSubscription: (id) => {
+    expireSubscriptions(db);
     const stmt = db.prepare(`
         SELECT 
             m.id, m.first_name, m.last_name, m.phone, m.email, m.qr_code, m.photo_url, m.photo, m.created_at,
             s.id as subscription_id,
+            s.plan_id, s.price_paid, s.auto_renew,
             s.status as subscription_status,
             s.start_date as subscription_start_date,
             s.end_date as subscription_end_date,
@@ -68,7 +80,7 @@ export const memberRepository = {
         LEFT JOIN subscriptions s ON s.id = (
             SELECT id FROM subscriptions 
             WHERE member_id = m.id 
-            ORDER BY created_at DESC 
+            ORDER BY (status = 'ACTIVE') DESC, id DESC
             LIMIT 1
         )
         LEFT JOIN plans p ON s.plan_id = p.id
@@ -91,6 +103,9 @@ export const memberRepository = {
       subscription: row.subscription_id
         ? {
             id: row.subscription_id,
+            planId: row.plan_id,
+            pricePaid: row.price_paid,
+            autoRenew: row.auto_renew,
             status: row.subscription_status,
             startDate: row.subscription_start_date,
             endDate: row.subscription_end_date,
@@ -131,10 +146,12 @@ export const memberRepository = {
     const deleteTransactions = db.prepare(
       "DELETE FROM transactions WHERE member_id = ?",
     );
+    const unlinkSales = db.prepare("UPDATE sales_history SET member_id = NULL WHERE member_id = ?");
     const deleteMember = db.prepare("DELETE FROM members WHERE id = ?");
 
     const transaction = db.transaction(() => {
       // Delete children of subscriptions AND members first
+      unlinkSales.run(id);
       deleteAccessLogs.run(id);
       deleteTransactions.run(id);
 

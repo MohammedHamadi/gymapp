@@ -24,6 +24,8 @@ import { RenewSubscriptionModal } from "./RenewSubscriptionModal";
 import { EditSubscriptionModal } from "./EditSubscriptionModal";
 
 import { useEffect, useState, useMemo } from "react";
+import { useStatusFilter } from "../hooks/useStatusFilter";
+import { localDate } from "../../../shared/subscriptionRules.js";
 
 type SortConfig = {
   key: string;
@@ -45,7 +47,7 @@ export function SubscriptionsPage() {
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useStatusFilter("gym_subscriptions_status_filter", ["ALL", "ACTIVE", "EXPIRED", "CANCELLED", "NOT_CANCELLED"]);
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "end_date",
     direction: "asc",
@@ -82,7 +84,8 @@ export function SubscriptionsPage() {
       alert("Subscription renewed successfully!");
     } catch (error) {
       console.error("Renewal failed", error);
-      alert("Failed to renew subscription");
+      alert(error instanceof Error ? error.message : "Failed to renew subscription");
+      throw error;
     }
   };
 
@@ -97,14 +100,15 @@ export function SubscriptionsPage() {
       await fetchData();
     } catch (error) {
       console.error("Update failed", error);
-      alert("Failed to update subscription");
+      alert(error instanceof Error ? error.message : "Failed to update subscription");
+      throw error;
     }
   };
 
   const getDaysLeft = (endDate: string) => {
     if (!endDate) return 0;
     const end = new Date(endDate);
-    const now = new Date();
+    const now = new Date(localDate());
     const diffTime = end.getTime() - now.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
@@ -141,7 +145,8 @@ export function SubscriptionsPage() {
 
       // Status Filter
       const status = sub.status || "UNKNOWN";
-      const matchesStatus = statusFilter === "ALL" || status === statusFilter;
+      const matchesStatus = statusFilter === "ALL" || status === statusFilter
+        || (statusFilter === "NOT_CANCELLED" && status !== "CANCELLED");
 
       return matchesSearch && matchesStatus;
     });
@@ -271,6 +276,7 @@ export function SubscriptionsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">All Status</SelectItem>
+                  <SelectItem value="NOT_CANCELLED">Hide cancelled</SelectItem>
                   <SelectItem value="ACTIVE">Active</SelectItem>
                   <SelectItem value="EXPIRED">Expired</SelectItem>
                   <SelectItem value="CANCELLED">Cancelled</SelectItem>
@@ -391,7 +397,7 @@ export function SubscriptionsPage() {
                                   : "text-green-600"
                             }`}
                           >
-                            {daysLeft < 0
+                            {!sub.end_date ? "No expiry" : daysLeft < 0
                               ? `${Math.abs(daysLeft)} days ago`
                               : `${daysLeft} days`}
                           </span>

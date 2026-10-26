@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -20,7 +20,7 @@ import {
 interface EditSubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: number, data: any) => void;
+  onSave: (id: number, data: any) => void | Promise<void>;
   subscription: any;
   plans?: any[]; // Optional if we want to allow changing plans, but for now let's focus on dates/status
 }
@@ -36,44 +36,48 @@ export function EditSubscriptionModal({
   const [price, setPrice] = useState("");
   const [status, setStatus] = useState("ACTIVE");
   const [remainingSessions, setRemainingSessions] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
 
   useEffect(() => {
     if (isOpen && subscription) {
       setStartDate(subscription.start_date || "");
       setEndDate(subscription.end_date || "");
       setPrice(
-        subscription.price_paid ? subscription.price_paid.toString() : "",
+        subscription.price_paid?.toString() ?? "",
       );
       setStatus(subscription.status || "ACTIVE");
       setRemainingSessions(
-        subscription.remaining_sessions
-          ? subscription.remaining_sessions.toString()
-          : "0",
+        subscription.remaining_sessions?.toString() ?? "",
       );
     }
   }, [isOpen, subscription]);
 
-  const handleSave = () => {
-    if (!subscription) return;
-
-    onSave(subscription.id, {
-      ...subscription, // Keep other fields like member_id, plan_id
-      memberId: subscription.member_id, // Ensure these map correctly (DB expects camelCase params in repo update often, or repo handles mapping)
-      planId: subscription.plan_id, // Repo update method uses @memberId, @planId from the object passed.
-      startDate,
-      endDate: endDate || null,
-      pricePaid: price ? parseFloat(price) : 0,
-      status,
-      remainingSessions: remainingSessions ? parseInt(remainingSessions) : 0,
-      autoRenew: subscription.auto_renew, // Keep existing auto-renew setting or add toggle if needed
-    });
-    onClose();
+  const handleSave = async () => {
+    if (!subscription || savingRef.current) return;
+    savingRef.current = true;
+    setIsSaving(true);
+    try {
+      await onSave(subscription.id, {
+        memberId: subscription.member_id, planId: subscription.plan_id,
+        startDate, endDate: endDate || null,
+        pricePaid: price === "" ? null : Number(price), status,
+        remainingSessions: remainingSessions === "" ? null : Number(remainingSessions),
+        autoRenew: subscription.auto_renew,
+      });
+      onClose();
+    } catch {
+      // The parent displays the error; preserve the entered values for correction.
+    } finally {
+      savingRef.current = false;
+      setIsSaving(false);
+    }
   };
 
   if (!subscription) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => { if (!savingRef.current) onClose(); }}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Subscription</DialogTitle>
@@ -137,6 +141,9 @@ export function EditSubscriptionModal({
             <Input
               id="sessions"
               type="number"
+              min="0"
+              step="1"
+              placeholder="Unlimited"
               value={remainingSessions}
               onChange={(e) => setRemainingSessions(e.target.value)}
               className="col-span-3"
@@ -162,15 +169,16 @@ export function EditSubscriptionModal({
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
           <Button
             type="submit"
             onClick={handleSave}
+            disabled={isSaving}
             className="bg-blue-600 hover:bg-blue-700"
           >
-            Save Changes
+            {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </DialogFooter>
       </DialogContent>

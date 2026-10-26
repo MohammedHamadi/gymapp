@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import {
@@ -10,11 +10,12 @@ import {
 } from "./ui/select";
 import { Button } from "./ui/button";
 import { Save, Upload, User, Camera } from "lucide-react";
+import { localDate, addDays } from "../../../shared/subscriptionRules.js";
 
 interface MemberFormProps {
   selectedMember?: any;
   isEditing?: boolean;
-  onSave?: (data: any) => void;
+  onSave?: (data: any) => void | Promise<void>;
   onCancel?: () => void;
 }
 
@@ -29,7 +30,9 @@ export function MemberForm({
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [photo, setPhoto] = useState<Buffer | null>(null);
+  const [photo, setPhoto] = useState<Uint8Array | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   // Subscription State
@@ -46,7 +49,7 @@ export function MemberForm({
     const loadPlans = async () => {
       try {
         const data = await window.api.plans.getAll();
-        setPlans(data.filter((p: any) => p.is_active));
+        setPlans(data);
       } catch (error) {
         console.error("Failed to load plans", error);
       }
@@ -76,25 +79,15 @@ export function MemberForm({
         setPhotoPreview(null);
       }
 
-      // Populate subscription details if available
-      if (selectedMember.subscription) {
-        const foundPlan = plans.find(
-          (p) => p.name === selectedMember.subscription.planName,
-        );
-        if (foundPlan) {
-          setSelectedPlanId(foundPlan.id.toString());
-          setPricePaid(
-            selectedMember.subscription.pricePaid?.toString() ||
-              foundPlan.price.toString(),
-          );
-        }
-
-        setStartDate(selectedMember.subscription.startDate || "");
-        setEndDate(selectedMember.subscription.endDate || "");
-        setRemainingSessions(
-          selectedMember.subscription.remainingSessions?.toString() || "",
-        );
-      }
+      const sub = selectedMember.subscription;
+      setSelectedPlanId(sub?.planId?.toString() || "");
+      setPricePaid(sub?.pricePaid?.toString() || "");
+      setStartDate(sub?.startDate || getTodayDate());
+      setEndDate(sub?.endDate || "");
+      setRemainingSessions(sub?.remainingSessions?.toString() ?? "");
+      setDurationDays(sub?.endDate && sub?.startDate
+        ? String(Math.round((new Date(sub.endDate).getTime() - new Date(sub.startDate).getTime()) / 86400000))
+        : "");
     } else {
       // Clear form
       setFirstName("");
@@ -159,16 +152,13 @@ export function MemberForm({
 
   // Helper: Get today's date YYYY-MM-DD
   function getTodayDate() {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
+    return localDate();
   }
 
   // Helper: Calculate End Date
   function calculateEndDate(start: string, days: number) {
     if (!start || !days) return "";
-    const date = new Date(start);
-    date.setDate(date.getDate() + days);
-    return date.toISOString().split("T")[0];
+    return addDays(start, days);
   }
 
   // Handle Duration Change (Manual Override)
@@ -189,7 +179,8 @@ export function MemberForm({
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (savingRef.current) return;
     if (!firstName || !lastName || !phone) {
       alert("Please fill in all required fields (Name, Phone)");
       return;
@@ -216,15 +207,24 @@ export function MemberForm({
             startDate,
             endDate: endDate || null,
             remainingSessions: remainingSessions
-              ? parseInt(remainingSessions)
-              : 0,
+              ? Number(remainingSessions)
+              : null,
             pricePaid: pricePaid ? parseFloat(pricePaid) : 0,
           }
         : null,
     };
 
     if (onSave) {
-      onSave(data);
+      savingRef.current = true;
+      setIsSaving(true);
+      try {
+        await onSave(data);
+      } catch {
+        // The parent displays the save error; leave the form available for correction.
+      } finally {
+        savingRef.current = false;
+        setIsSaving(false);
+      }
     }
   };
 
@@ -390,12 +390,12 @@ export function MemberForm({
                   "-"}
               </div>
             ) : (
-              <Select value={selectedPlanId} onValueChange={handlePlanChange}>
+              <Select value={selectedPlanId} onValueChange={handlePlanChange} disabled={!!selectedMember?.subscription}>
                 <SelectTrigger className="border-blue-300">
                   <SelectValue placeholder="Select a plan..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {plans.map((plan) => (
+                  {plans.filter((plan) => plan.is_active || plan.id.toString() === selectedPlanId).map((plan) => (
                     <SelectItem key={plan.id} value={plan.id.toString()}>
                       {plan.name} - {plan.price} DZD
                     </SelectItem>
@@ -405,6 +405,9 @@ export function MemberForm({
             )}
           </div>
 
+          {!isViewMode && selectedMember?.subscription && (
+            <p className="text-xs text-gray-500">Use Renew Subscription to switch plans or start a new subscription.</p>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="startDate" className="text-blue-900 mb-2">
@@ -503,10 +506,11 @@ export function MemberForm({
             <div className="pt-4">
               <Button
                 onClick={handleSave}
+                disabled={isSaving}
                 className="w-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2"
               >
                 <Save className="w-5 h-5" />
-                Save Member & Subscription
+                {isSaving ? "Saving..." : "Save Member & Subscription"}
               </Button>
             </div>
           )}

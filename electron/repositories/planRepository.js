@@ -21,8 +21,8 @@ export const planRepository = {
     const data = {
       name: plan.name,
       type: plan.type,
-      durationDays: plan.duration_days || plan.durationDays,
-      sessionCount: plan.session_count || plan.sessionCount,
+      durationDays: plan.duration_days ?? plan.durationDays ?? null,
+      sessionCount: plan.session_count ?? plan.sessionCount ?? null,
       price: plan.price,
       isActive:
         plan.is_active !== undefined ? plan.is_active : plan.isActive ? 1 : 0,
@@ -42,8 +42,8 @@ export const planRepository = {
       id,
       name: plan.name,
       type: plan.type,
-      durationDays: plan.duration_days || plan.durationDays,
-      sessionCount: plan.session_count || plan.sessionCount,
+      durationDays: plan.duration_days ?? plan.durationDays ?? null,
+      sessionCount: plan.session_count ?? plan.sessionCount ?? null,
       price: plan.price,
       isActive:
         plan.is_active !== undefined ? plan.is_active : plan.isActive ? 1 : 0,
@@ -52,6 +52,9 @@ export const planRepository = {
   },
 
   delete: (id) => {
+    if (db.prepare("SELECT 1 FROM subscriptions WHERE plan_id = ? LIMIT 1").get(id)) {
+      throw new Error("This plan has subscription history. Deactivate it instead of deleting it.");
+    }
     const stmt = db.prepare("DELETE FROM plans WHERE id = ?");
     return stmt.run(id);
   },

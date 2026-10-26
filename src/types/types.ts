@@ -26,7 +26,7 @@ export interface Subscription {
   plan_id: number;
   start_date: string;
   end_date: string | null;
-  remaining_sessions: number;
+  remaining_sessions: number | null;
   status: "ACTIVE" | "EXPIRED" | "CANCELLED";
   price_paid: number;
   auto_renew: number; // SQLite BOOLEAN (0 or 1)

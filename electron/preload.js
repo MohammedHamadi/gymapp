@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld("api", {
 
   // Specific methods can be defined here if preferred for stricter typing later
   members: {
+    save: (data) => ipcRenderer.invoke("members:save", data),
     getAll: () => ipcRenderer.invoke("members:getAll"),
     getById: (id) => ipcRenderer.invoke("members:getById", id),
     create: (data) => ipcRenderer.invoke("members:create", data),
