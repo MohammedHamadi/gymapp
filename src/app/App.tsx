@@ -142,6 +142,7 @@ export default function App() {
   };
 
   const handleSaveMember = async (data: any) => {
+    try {
       await window.api.members.save({
         ...data,
         subscriptionId: selectedMember?.subscription?.id,
