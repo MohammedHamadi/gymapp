@@ -86,12 +86,15 @@ export default function App() {
       try {
         const members = await window.api.members.getAll();
         setMembers(members);
+        setSelectedMember((previous: any) => previous
+          ? members.find((member: any) => member.id === previous.id) || null
+          : null);
       } catch (error) {
         console.error("Error fetching members:", error);
       }
     };
     fetchMembers();
-  }, []);
+  }, [currentPage]);
 
   const handleNavigate = (page: string) => {
     switch (page) {
@@ -139,99 +142,18 @@ export default function App() {
   };
 
   const handleSaveMember = async (data: any) => {
-    try {
-      if (data.member.id) {
-        // 1. Update existing member details
-        await window.api.members.update(data.member.id, {
-          ...data.member,
-          photoUrl: null, // Ensure parameter exists for SQL
-        });
-
-        // 2. THE FIX: Update the subscription details if they were changed!
-        if (data.subscription && selectedMember?.subscription?.id) {
-          const isDateValid =
-            !data.subscription.endDate ||
-            new Date(data.subscription.endDate).getTime() >=
-              new Date().setHours(0, 0, 0, 0);
-          const hasSessions =
-            data.subscription.remainingSessions === null ||
-            data.subscription.remainingSessions > 0;
-          const status =
-            isDateValid && hasSessions
-              ? "ACTIVE"
-              : selectedMember.subscription.status;
-
-          await window.api.subscriptions.update(selectedMember.subscription.id, {
-            memberId: data.member.id,
-            planId: data.subscription.planId,
-            startDate: data.subscription.startDate,
-            endDate: data.subscription.endDate,
-            remainingSessions: data.subscription.remainingSessions,
-            pricePaid: data.subscription.pricePaid,
-            status,
-            autoRenew: selectedMember.subscription.autoRenew || 0,
-          });
-        }
-        // 3. If they didn't have a plan before, but we added one during the edit
-        else if (data.subscription && !selectedMember?.subscription) {
-          await window.api.subscriptions.create({
-            memberId: data.member.id,
-            planId: data.subscription.planId,
-            startDate: data.subscription.startDate,
-            endDate: data.subscription.endDate,
-            remainingSessions: data.subscription.remainingSessions,
-            status: "ACTIVE",
-            pricePaid: data.subscription.pricePaid,
-            autoRenew: 0,
-          });
-        }
-
-      } else {
-        // Create new member (This part stays exactly the same)
-        const memberId = `GYM${Date.now().toString().slice(-8)}`;
-        const qrCode = memberId;
-
-        const newMember = {
-          ...data.member,
-          id: memberId,
-          qrCode: qrCode,
-          photoUrl: null,
-        };
-
-        await window.api.members.create(newMember);
-
-        // Create Subscription if provided
-        if (data.subscription) {
-          const newSubscription = {
-            memberId: memberId,
-            planId: data.subscription.planId,
-            startDate: data.subscription.startDate,
-            endDate: data.subscription.endDate,
-            remainingSessions: data.subscription.remainingSessions,
-            status: "ACTIVE",
-            pricePaid: data.subscription.pricePaid,
-            autoRenew: 0,
-          };
-          await window.api.subscriptions.create(newSubscription);
-        }
-      }
-
-      // Refresh list so the new session count instantly appears in the table
-      const members = await window.api.members.getAll();
-      setMembers(members);
-
-      // Give the UI 100ms to unlock the screen before showing the alert
-      setTimeout(() => {
-        alert(data.member.id ? "Member updated!" : "Member and Subscription created!");
-      }, 100);
-
-      // Close/Clear
+      await window.api.members.save({
+        ...data,
+        subscriptionId: selectedMember?.subscription?.id,
+      });
+      setMembers(await window.api.members.getAll());
       setSelectedMember(null);
       setIsEditing(false);
-
+      alert(data.member.id ? "Member updated!" : "Member and subscription created!");
     } catch (error) {
       console.error("Error saving member:", error);
-      alert("Failed to save member.");
+      alert(error instanceof Error ? error.message : "Failed to save member.");
+      throw error;
     }
   };
 
@@ -327,7 +249,7 @@ export default function App() {
             alert(`Subscription status updated to: ${newStatus}`);
           } catch (error) {
             console.error("Failed to update status", error);
-            alert("Error updating status");
+            alert(error instanceof Error ? error.message : "Error updating status");
           }
           setConfirmConfig(null);
         },
@@ -361,7 +283,8 @@ export default function App() {
       alert("Subscription renewed successfully!");
     } catch (error) {
       console.error("Renewal failed", error);
-      alert("Failed to renew subscription");
+      alert(error instanceof Error ? error.message : "Failed to renew subscription");
+      throw error;
     }
   };
 
@@ -466,11 +389,7 @@ export default function App() {
         onClose={() => setShowRenewModal(false)}
         onRenew={handleRenewSubmit}
         member={selectedMember}
-        currentPlanId={
-          selectedMember?.subscription?.planName
-            ? undefined
-            : undefined
-        }
+        currentPlanId={selectedMember?.subscription?.planId?.toString()}
       />
       <ConfirmDialog
         open={!!confirmConfig}

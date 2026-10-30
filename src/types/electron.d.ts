@@ -3,6 +3,7 @@ import { Member, Plan, Subscription, AccessLog, Transaction } from "./types";
 export interface ElectronApi {
   invoke: (channel: string, ...args: any[]) => Promise<any>;
   members: {
+    save: (data: any) => Promise<any>;
     getAll: () => Promise<Member[]>;
     getById: (id: string) => Promise<Member>;
     create: (member: Partial<Member>) => Promise<any>;

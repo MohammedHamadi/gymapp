@@ -1,7 +1,10 @@
 import { ipcMain } from "electron";
 import { memberRepository } from "../repositories/memberRepository.js";
 
+import { saveMember } from "../services/memberService.js";
+
 export function setupMemberHandlers() {
+  ipcMain.handle("members:save", (event, data) => saveMember(data));
   ipcMain.handle("members:getAll", () => {
     return memberRepository.findAll();
   });

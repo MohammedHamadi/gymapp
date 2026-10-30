@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useStatusFilter } from "../hooks/useStatusFilter";
 import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
@@ -35,7 +36,7 @@ export function MembersTable({
   selectedMemberId,
 }: MembersTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useStatusFilter("gym_members_status_filter", ["ALL", "ACTIVE", "EXPIRED", "CANCELLED", "NO PLAN", "NOT_CANCELLED"]);
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "start_date",
     direction: "desc",
@@ -72,7 +73,8 @@ export function MembersTable({
 
       // Status Filter
       const status = member.subscription?.status || "NO PLAN";
-      const matchesStatus = statusFilter === "ALL" || status === statusFilter;
+      const matchesStatus = statusFilter === "ALL" || status === statusFilter
+        || (statusFilter === "NOT_CANCELLED" && status !== "CANCELLED");
 
       return matchesSearch && matchesStatus;
     });
@@ -145,6 +147,7 @@ export function MembersTable({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="NOT_CANCELLED">Hide cancelled</SelectItem>
                 <SelectItem value="ACTIVE">Active</SelectItem>
                 <SelectItem value="EXPIRED">Expired</SelectItem>
                 <SelectItem value="CANCELLED">Cancelled</SelectItem>

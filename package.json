@@ -8,6 +8,7 @@
   "main": "electron/main.js",
   "scripts": {
     "build": "vite build",
+    "test": "node scripts/run-tests.cjs",
     "dist": "npm run build && electron-builder",
     "dev": "vite",
     "electron": "electron .",
@@ -101,6 +102,7 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "shared/**/*",
       "package.json"
     ],
     "asar": true,
