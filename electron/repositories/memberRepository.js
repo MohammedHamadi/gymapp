@@ -17,7 +17,7 @@ export const memberRepository = {
         LEFT JOIN subscriptions s ON s.id = (
             SELECT id FROM subscriptions 
             WHERE member_id = m.id 
-            ORDER BY created_at DESC 
+            ORDER BY created_at DESC, id DESC 
             LIMIT 1
         )
         LEFT JOIN plans p ON s.plan_id = p.id
@@ -68,7 +68,7 @@ export const memberRepository = {
         LEFT JOIN subscriptions s ON s.id = (
             SELECT id FROM subscriptions 
             WHERE member_id = m.id 
-            ORDER BY created_at DESC 
+            ORDER BY created_at DESC, id DESC 
             LIMIT 1
         )
         LEFT JOIN plans p ON s.plan_id = p.id

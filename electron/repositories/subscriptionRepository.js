@@ -7,6 +7,12 @@ export const subscriptionRepository = {
       FROM subscriptions s
       LEFT JOIN members m ON s.member_id = m.id
       LEFT JOIN plans p ON s.plan_id = p.id
+      WHERE s.id = (
+        SELECT id FROM subscriptions 
+        WHERE member_id = s.member_id 
+        ORDER BY created_at DESC, id DESC 
+        LIMIT 1
+      )
       ORDER BY s.created_at DESC
     `);
     return stmt.all();
@@ -40,14 +46,14 @@ export const subscriptionRepository = {
   },
 
   getStats: () => {
-    // Active: Marked active AND not physically expired (valid through 24:00 of end_date)
+    // Active: Marked active, not physically expired, and has remaining sessions
     const activeCount = db
       .prepare(
-        "SELECT COUNT(*) as count FROM subscriptions WHERE status = 'ACTIVE' AND (date(end_date) >= date('now', 'localtime') OR end_date IS NULL)",
+        "SELECT COUNT(*) as count FROM subscriptions WHERE status = 'ACTIVE' AND (date(end_date) >= date('now', 'localtime') OR end_date IS NULL) AND (remaining_sessions IS NULL OR remaining_sessions > 0)",
       )
       .get().count;
 
-    // Expiring: Active, not expired, and ending within 7 days
+    // Expiring: Active, not expired, ending within 7 days, and has remaining sessions
     const expiringCount = db
       .prepare(
         `
@@ -56,14 +62,15 @@ export const subscriptionRepository = {
         WHERE status = 'ACTIVE' 
         AND date(end_date) >= date('now', 'localtime')
         AND date(end_date) <= date('now', 'localtime', '+7 days') 
+        AND (remaining_sessions IS NULL OR remaining_sessions > 0)
     `,
       )
       .get().count;
 
-    // Expired: Explicitly expired OR Active but past end date (after 24:00 of end_date)
+    // Expired: Explicitly expired OR Active but past end date OR Active with 0 sessions
     const expiredCount = db
       .prepare(
-        "SELECT COUNT(*) as count FROM subscriptions WHERE status = 'EXPIRED' OR (status = 'ACTIVE' AND date(end_date) < date('now', 'localtime'))",
+        "SELECT COUNT(*) as count FROM subscriptions WHERE status = 'EXPIRED' OR (status = 'ACTIVE' AND (date(end_date) < date('now', 'localtime') OR remaining_sessions <= 0))",
       )
       .get().count;
 
@@ -95,6 +102,7 @@ export const subscriptionRepository = {
         WHERE s.status = 'ACTIVE' 
         AND date(s.end_date) <= date('now', 'localtime', '+7 days') 
         AND date(s.end_date) >= date('now', 'localtime')
+        AND (s.remaining_sessions IS NULL OR s.remaining_sessions > 0)
         ORDER BY s.end_date ASC
     `);
     return stmt.all();
@@ -133,12 +141,11 @@ export const subscriptionRepository = {
   },
 
   renew: (memberId, subscription) => {
-    // 1. Cancel active subscriptions for THIS plan
+    // 1. Cancel active subscriptions for this member
     const cancelOld = db.prepare(`
       UPDATE subscriptions 
       SET status = 'CANCELLED' 
       WHERE member_id = @memberId 
-      AND plan_id = @planId 
       AND status = 'ACTIVE'
     `);
 
@@ -157,7 +164,6 @@ export const subscriptionRepository = {
       // Cancel old
       cancelOld.run({
         memberId: memberId,
-        planId: sub.planId,
       });
 
       // Create new

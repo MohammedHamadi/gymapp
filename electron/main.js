@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron"; 
+import { app, BrowserWindow, ipcMain, Menu } from "electron"; 
 import path from "path";
 import { fileURLToPath } from "url";
 import db from "./db/client.js";
@@ -28,6 +28,22 @@ function createWindow() {
     },
   });
 
+  mainWindow.webContents.on("context-menu", (e, params) => {
+    if (params.isEditable) {
+      const contextMenu = Menu.buildFromTemplate([
+        { role: "undo" },
+        { role: "redo" },
+        { type: "separator" },
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+        { type: "separator" },
+        { role: "selectAll" },
+      ]);
+      contextMenu.popup({ window: mainWindow });
+    }
+  });
+
   if (!app.isPackaged) {
     mainWindow.loadURL("http://localhost:5173");
   } else {
@@ -36,6 +52,21 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  const menuTemplate = [
+    {
+      label: "Edit",
+      submenu: [
+        { role: "undo" },
+        { role: "redo" },
+        { type: "separator" },
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+        { role: "selectAll" },
+      ],
+    },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate));
   setupMemberHandlers();
   setupPlanHandlers();
   setupSubscriptionHandlers();

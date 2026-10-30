@@ -707,8 +707,14 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
                           margin: 0,
                         }}
                       >
-                        {scanResult.subscription.planName} • {scanResult.subscription.remainingSessions}{" "}
-                        {scanResult.subscription.remainingSessions === 1 ? "session" : "sessions"} left
+                        {scanResult.subscription.planName}
+                        {scanResult.subscription.remainingSessions !== null &&
+                          scanResult.subscription.remainingSessions !== undefined &&
+                          ` • ${scanResult.subscription.remainingSessions} ${
+                            scanResult.subscription.remainingSessions === 1
+                              ? "session"
+                              : "sessions"
+                          } left`}
                       </p>
                     )}
                     {isAboutToEnd && (

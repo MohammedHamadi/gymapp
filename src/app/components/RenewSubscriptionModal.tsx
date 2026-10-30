@@ -97,7 +97,7 @@ export function RenewSubscriptionModal({
       planId: parseInt(selectedPlanId),
       startDate,
       endDate: endDate || null,
-      remainingSessions: remainingSessions ? parseInt(remainingSessions) : 0,
+      remainingSessions: remainingSessions ? parseInt(remainingSessions) : null,
       pricePaid: price ? parseFloat(price) : 0,
       status: "ACTIVE",
       autoRenew: 0,

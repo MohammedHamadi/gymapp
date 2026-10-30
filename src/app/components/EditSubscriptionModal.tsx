@@ -46,9 +46,10 @@ export function EditSubscriptionModal({
       );
       setStatus(subscription.status || "ACTIVE");
       setRemainingSessions(
-        subscription.remaining_sessions
+        subscription.remaining_sessions !== null &&
+          subscription.remaining_sessions !== undefined
           ? subscription.remaining_sessions.toString()
-          : "0",
+          : "",
       );
     }
   }, [isOpen, subscription]);
@@ -64,7 +65,8 @@ export function EditSubscriptionModal({
       endDate: endDate || null,
       pricePaid: price ? parseFloat(price) : 0,
       status,
-      remainingSessions: remainingSessions ? parseInt(remainingSessions) : 0,
+      remainingSessions:
+        remainingSessions !== "" ? parseInt(remainingSessions) : null,
       autoRenew: subscription.auto_renew, // Keep existing auto-renew setting or add toggle if needed
     });
     onClose();

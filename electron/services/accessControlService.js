@@ -56,11 +56,44 @@ export const accessControlService = {
     // 3. Fetch all active subscriptions for this member
     const activeSubs = subscriptionRepository.findActiveByMemberId(id);
 
-    // A. No Active Subscription
-    if (!activeSubs || activeSubs.length === 0) {
-      const reason = "No active subscription";
+    // Helper: check if a subscription is expired by date or exhausted
+    const checkSubscriptionExpired = (s) => {
+      let isExpired = false;
+      if (s.end_date) {
+        const datePart = String(s.end_date).split("T")[0];
+        const [year, month, day] = datePart.split("-").map(Number);
+        const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+        isExpired = new Date() > endOfDay;
+      }
+      const noSessions =
+        s.remaining_sessions !== null && s.remaining_sessions <= 0;
+      return { isExpired, noSessions, isInvalid: isExpired || noSessions };
+    };
+
+    // Auto-update expired or exhausted active subscriptions in the database
+    const validSubs = [];
+    for (const s of activeSubs || []) {
+      const { isExpired, noSessions, isInvalid } = checkSubscriptionExpired(s);
+      if (isInvalid) {
+        subscriptionRepository.updateStatus(s.id, "EXPIRED");
+      } else {
+        validSubs.push(s);
+      }
+    }
+
+    // A. No Valid Active Subscription
+    if (!validSubs || validSubs.length === 0) {
+      let reason = "No active subscription";
+      let expiredSubId = null;
+      if (activeSubs && activeSubs.length > 0) {
+        const first = activeSubs[0];
+        expiredSubId = first.id;
+        const { noSessions, isExpired } = checkSubscriptionExpired(first);
+        reason = noSessions ? "No sessions remaining" : isExpired ? "Subscription expired" : "No active subscription";
+      }
       accessLogRepository.create({
         memberId: id,
+        subscriptionId: expiredSubId,
         type: "CHECK_IN",
         status: "DENIED",
         denialReason: reason,
@@ -68,12 +101,12 @@ export const accessControlService = {
       return { status: "DENIED", member: memberInfo, reason };
     }
 
-    // B. Multiple active subscriptions — prompt user to choose
-    if (activeSubs.length > 1 && !subscriptionId) {
+    // B. Multiple valid active subscriptions — prompt user to choose
+    if (validSubs.length > 1 && !subscriptionId) {
       return {
         status: "PENDING_SELECTION",
         member: memberInfo,
-        subscriptions: activeSubs.map((s) => ({
+        subscriptions: validSubs.map((s) => ({
           id: s.id,
           planName: s.plan_name,
           planType: s.plan_type || null,
@@ -88,7 +121,7 @@ export const accessControlService = {
     // C. Resolve which subscription to use
     let sub;
     if (subscriptionId) {
-      sub = activeSubs.find((s) => s.id === subscriptionId);
+      sub = validSubs.find((s) => s.id === subscriptionId);
       if (!sub) {
         return {
           status: "DENIED",
@@ -98,35 +131,7 @@ export const accessControlService = {
       }
     } else {
       // Only one active sub — auto-select
-      sub = activeSubs[0];
-    }
-
-    // D. Deny if end_date passed (after 24:00 / 23:59:59.999 of end_date) OR remaining_sessions is 0
-    let isExpired = false;
-    if (sub.end_date) {
-      const datePart = String(sub.end_date).split("T")[0];
-      const [year, month, day] = datePart.split("-").map(Number);
-      const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
-      isExpired = new Date() > endOfDay;
-    }
-    const noSessions =
-      sub.remaining_sessions !== null && sub.remaining_sessions <= 0;
-
-    if (isExpired || noSessions) {
-      const reason = isExpired
-        ? "Subscription expired"
-        : "No sessions remaining";
-      accessLogRepository.create({
-        memberId: id,
-        subscriptionId: sub.id,
-        type: "CHECK_IN",
-        status: "DENIED",
-        denialReason: reason,
-      });
-      if (isExpired) {
-        subscriptionRepository.updateStatus(sub.id, "EXPIRED");
-      }
-      return { status: "DENIED", member: memberInfo, reason };
+      sub = validSubs[0];
     }
 
     // E. Grant Access — always deduct one session
@@ -143,6 +148,11 @@ export const accessControlService = {
       sub.remaining_sessions !== null ? sub.remaining_sessions - 1 : null;
     const isAboutToEnd =
       remainingSessions !== null && remainingSessions <= 1;
+
+    // If this was their last session, mark it EXPIRED in the database
+    if (remainingSessions === 0) {
+      subscriptionRepository.updateStatus(sub.id, "EXPIRED");
+    }
 
     return {
       status: "GRANTED",

@@ -215,9 +215,10 @@ export function MemberForm({
             planId: parseInt(selectedPlanId),
             startDate,
             endDate: endDate || null,
-            remainingSessions: remainingSessions
-              ? parseInt(remainingSessions)
-              : 0,
+            remainingSessions:
+              remainingSessions !== ""
+                ? parseInt(remainingSessions)
+                : null,
             pricePaid: pricePaid ? parseFloat(pricePaid) : 0,
           }
         : null,

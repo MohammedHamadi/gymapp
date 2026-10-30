@@ -149,6 +149,18 @@ export default function App() {
 
         // 2. THE FIX: Update the subscription details if they were changed!
         if (data.subscription && selectedMember?.subscription?.id) {
+          const isDateValid =
+            !data.subscription.endDate ||
+            new Date(data.subscription.endDate).getTime() >=
+              new Date().setHours(0, 0, 0, 0);
+          const hasSessions =
+            data.subscription.remainingSessions === null ||
+            data.subscription.remainingSessions > 0;
+          const status =
+            isDateValid && hasSessions
+              ? "ACTIVE"
+              : selectedMember.subscription.status;
+
           await window.api.subscriptions.update(selectedMember.subscription.id, {
             memberId: data.member.id,
             planId: data.subscription.planId,
@@ -156,8 +168,8 @@ export default function App() {
             endDate: data.subscription.endDate,
             remainingSessions: data.subscription.remainingSessions,
             pricePaid: data.subscription.pricePaid,
-            status: selectedMember.subscription.status, // Keep current status
-            autoRenew: selectedMember.subscription.autoRenew || 0
+            status,
+            autoRenew: selectedMember.subscription.autoRenew || 0,
           });
         }
         // 3. If they didn't have a plan before, but we added one during the edit
