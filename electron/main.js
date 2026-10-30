@@ -16,8 +16,22 @@ import { setupEquipmentHandlers } from "./handlers/equipmentHandlers.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+let mainWindow = null;
+
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 function createWindow() {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     autoHideMenuBar: true,
@@ -49,6 +63,10 @@ function createWindow() {
   } else {
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
   }
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
 }
 
 app.whenReady().then(() => {
@@ -94,8 +112,16 @@ app.whenReady().then(() => {
     const receiptWin = new BrowserWindow({ show: false });
     receiptWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
     receiptWin.webContents.on('did-finish-load', () => {
-      receiptWin.webContents.print({ silent: false });
+      receiptWin.webContents.print({ silent: false }, () => {
+        if (!receiptWin.isDestroyed()) receiptWin.destroy();
+      });
     });
+    receiptWin.webContents.on('did-fail-load', () => {
+      if (!receiptWin.isDestroyed()) receiptWin.destroy();
+    });
+    setTimeout(() => {
+      if (!receiptWin.isDestroyed()) receiptWin.destroy();
+    }, 30000);
   });
   createWindow();
 
@@ -110,7 +136,10 @@ app.on("window-all-closed", function () {
 
 app.on("will-quit", () => {
   try {
-    console.log("Closing database connection...");
+    console.log("Checkpointing and closing database connection...");
+    try {
+      db.pragma("wal_checkpoint(PASSIVE)");
+    } catch (_) {}
     db.close();
     console.log("Database closed successfully.");
   } catch (err) {

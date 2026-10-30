@@ -17,6 +17,8 @@ const db = new Database(dbPath, {
   verbose: app.isPackaged ? null : console.log 
 });
 db.pragma("journal_mode = WAL");
+db.pragma("busy_timeout = 5000");
+db.pragma("synchronous = NORMAL");
 
 // Initialize Schema
 const schemaPath = path.join(__dirname, "schema.sql");

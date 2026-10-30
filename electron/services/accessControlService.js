@@ -39,12 +39,15 @@ export const accessControlService = {
       return { status: "GRANTED", member: memberInfo, message: "Check-out successful" };
     }
     const subscriptions = subscriptionRepository.findActiveByMemberId(id);
-    if (subscriptions.length !== 1) return deny("No active subscription");
-    const sub = subscriptions[0];
+    if (!subscriptions || subscriptions.length === 0) return deny("No active subscription");
+    const sub = (subscriptionId != null)
+      ? subscriptions.find((s) => s.id === Number(subscriptionId)) || subscriptions[0]
+      : subscriptions[0];
     if (subscriptionId != null && Number(subscriptionId) !== sub.id) {
       return deny("Selected subscription is no longer active");
     }
-    if (sub.start_date > localDate()) return deny("Subscription has not started yet", sub.id);
+    const startDatePart = String(sub.start_date).slice(0, 10);
+    if (startDatePart > localDate()) return deny("Subscription has not started yet", sub.id);
     // NULL is unlimited; only subscriptions with a visit limit are decremented.
     if (sub.remaining_sessions !== null) {
       const result = subscriptionRepository.decrementSession(sub.id);

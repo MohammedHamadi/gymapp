@@ -329,3 +329,24 @@ test("a failed backup leaves legacy subscriptions unchanged", async (t) => {
   assert.equal(db.prepare("SELECT COUNT(*) n FROM subscriptions WHERE status='ACTIVE'").get().n, 2);
   assert.equal(state.needsSubscriptionMigration(db), true);
 });
+
+test("immediate scan after renewal grants access without locking or declining", async (t) => {
+  const { subs, access } = await harness(t);
+  subs.create(subscription({ planId: 1, startDate: today, endDate: day(30), remainingSessions: null }));
+  const scanBefore = access.handleAccessRequest("GYM12345678", "CHECK_IN");
+  assert.equal(scanBefore.status, "GRANTED");
+
+  // Perform a renewal
+  subs.renew("GYM12345678", subscription({ planId: 1, startDate: today, endDate: day(30), remainingSessions: null }));
+
+  // Immediately scan same member
+  const scanAfterSame = access.handleAccessRequest("GYM12345678", "CHECK_IN");
+  assert.equal(scanAfterSame.status, "GRANTED");
+
+  // Immediately scan another member with an active plan
+  subs.create(subscription({ memberId: "GYM87654321", planId: 2, startDate: today, endDate: null, remainingSessions: 5 }));
+  const scanOther = access.handleAccessRequest("GYM87654321", "CHECK_IN");
+  assert.equal(scanOther.status, "GRANTED");
+  assert.equal(scanOther.subscription.remainingSessions, 4);
+});
+

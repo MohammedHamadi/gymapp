@@ -18,11 +18,19 @@ export function setupAccessLogHandlers() {
   ipcMain.handle(
     "accessLogs:validate",
     (event, { id, type, subscriptionId }) => {
-      return accessControlService.handleAccessRequest(
-        id,
-        type,
-        subscriptionId || null,
-      );
+      try {
+        return accessControlService.handleAccessRequest(
+          id,
+          type,
+          subscriptionId || null,
+        );
+      } catch (err) {
+        console.error("Access validation error:", err);
+        return {
+          status: "DENIED",
+          reason: err?.message || "System error",
+        };
+      }
     },
   );
 
