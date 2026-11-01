@@ -1,3 +1,15 @@
+export interface MemberSummary {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string | null;
+  qrCode: string;
+  photoUrl: string | null;
+  createdAt: string;
+  isArchived: boolean;
+}
+
 export interface Member {
   id: string;
   first_name: string;

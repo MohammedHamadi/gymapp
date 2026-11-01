@@ -22,6 +22,7 @@ interface ScanResult {
   message?: string;
   reason?: string;
   warning?: string;
+  duplicate?: boolean;
   subscription?: {
     id: number;
     planName: string;
@@ -109,6 +110,8 @@ export function ScannerPage({ onBack }: ScannerPageProps) {
       setScanResult(result);
       setIsAnimating(true);
       setInputValue("");
+
+      if (result.duplicate) return;
 
       const hasOneOrLessSessions =
         result.subscription &&

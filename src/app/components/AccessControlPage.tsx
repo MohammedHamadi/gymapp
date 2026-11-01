@@ -107,6 +107,8 @@ export function AccessControlPage() {
       fetchLogs();
       fetchStats();
 
+      if (result.duplicate) return;
+
       const hasOneOrLessSessions =
         result.subscription &&
         ((result.subscription.remainingSessions !== null &&

@@ -10,11 +10,17 @@ export const accessLogRepository = {
       subscriptionId = null,
     } = log;
     const stmt = db.prepare(`
-      INSERT INTO access_logs (member_id, subscription_id, type, status, denial_reason)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO access_logs (member_id, subscription_id, type, status, denial_reason, timestamp)
+      VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%d %H:%M:%f', 'now'))
     `);
     return stmt.run(memberId, subscriptionId, type, status, denialReason);
   },
+
+  findLastGrantedMovement: (memberId) => db.prepare(`
+    SELECT *, (julianday('now') - julianday(timestamp)) * 86400 AS elapsed_seconds
+    FROM access_logs WHERE member_id = ? AND status = 'GRANTED'
+    ORDER BY id DESC LIMIT 1
+  `).get(memberId),
 
   findByMemberId: (memberId) => {
     const stmt = db.prepare(`
@@ -44,7 +50,7 @@ export const accessLogRepository = {
       FROM members m
       JOIN access_logs al ON m.id = al.member_id
       WHERE al.id = (
-          SELECT MAX(id) FROM access_logs WHERE member_id = m.id
+          SELECT MAX(id) FROM access_logs WHERE member_id = m.id AND status = 'GRANTED'
       )
       AND al.type = 'CHECK_IN'
       AND al.status = 'GRANTED'     /* <--- ADD THIS EXACT LINE HERE */

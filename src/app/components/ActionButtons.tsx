@@ -1,7 +1,7 @@
 import {
   UserPlus,
   Edit,
-  Trash2,
+  Archive,
   Printer,
   History,
   ToggleLeft,
@@ -35,8 +35,8 @@ const actionButtons = [
     action: "edit",
   },
   {
-    icon: Trash2,
-    label: "Delete",
+    icon: Archive,
+    label: "Archive",
     color: "bg-red-600 hover:bg-red-700",
     action: "delete",
   },

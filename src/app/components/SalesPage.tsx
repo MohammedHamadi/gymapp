@@ -27,21 +27,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import { useState, useEffect } from "react";
-import { Product, SalesHistory, Member } from "../../types/types";
+import { useState, useEffect, useRef } from "react";
+import { Product, SalesHistory, MemberSummary } from "../../types/types";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 export function SalesPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSales, setRecentSales] = useState<any[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<MemberSummary[]>([]);
    
 const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 const [lastSaleData, setLastSaleData] = useState<any>(null);
 
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
+  const total = selectedItems.reduce((cents, item) => cents + Math.round(item.price * 100) * item.quantity, 0) / 100;
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const checkoutRef = useRef(false);
+  const pendingCheckout = useRef<{ fingerprint: string; requestId: string } | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<"Cash" | "Card">(
     "Cash",
   );
@@ -180,81 +183,77 @@ const [lastSaleData, setLastSaleData] = useState<any>(null);
     });
   };
 
- const addItem = (product: Product) => {
-    // Check if the item is already in the cart
-    const existingIndex = selectedItems.findIndex((item) => item.id === product.id);
-
-    if (existingIndex >= 0) {
-      // It exists! Just increase the quantity by 1
-      const newItems = [...selectedItems];
-      newItems[existingIndex].quantity += 1;
-      setSelectedItems(newItems);
-    } else {
-      // It's a new item, add it with quantity 1
-      setSelectedItems([...selectedItems, { ...product, quantity: 1 }]);
+  const addItem = (product: Product) => {
+    if (checkoutRef.current) return;
+    const quantity = selectedItems.find(item => item.id === product.id)?.quantity || 0;
+    if (quantity >= product.stock) {
+      alert(`Not enough stock for ${product.name}.`);
+      return;
     }
-    
-    // Always add the single item's price to the grand total
-    setTotal(total + product.price);
+    setSelectedItems(previous => {
+      const current = previous.find(item => item.id === product.id);
+      if ((current?.quantity || 0) >= product.stock) return previous;
+      return current
+        ? previous.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item)
+        : [...previous, { ...product, quantity: 1 }];
+    });
   };
 
   const removeItem = (index: number) => {
-    const item = selectedItems[index];
-    // Subtract the (price × quantity) so the total doesn't break
-    setTotal(total - (item.price * item.quantity));
-    setSelectedItems(selectedItems.filter((_, i) => i !== index));
+    if (!checkoutRef.current) setSelectedItems(previous => previous.filter((_, i) => i !== index));
   };
 
-  const clearCart = () => {
+  const resetCart = () => {
     setSelectedItems([]);
-    setTotal(0);
     setSelectedMemberId("walk_in");
   };
 
+  const clearCart = () => {
+    if (!checkoutRef.current) resetCart();
+  };
+
   const processSale = async () => {
+    if (checkoutRef.current) return;
     if (selectedItems.length === 0) {
       alert("Please add items to the cart first");
       return;
     }
-
-    
-
+    checkoutRef.current = true;
+    setIsCheckingOut(true);
     try {
-      const actualMemberId =
-        selectedMemberId === "walk_in" ? "" : selectedMemberId;
-
-      // 1. Format the cart items for the DB
-      const salesBatch = selectedItems.map((item) => ({
-        product_id: item.id,
-        member_id: actualMemberId || null,
-        quantity: item.quantity,
-        total_price: item.price,
+      const actualMemberId = selectedMemberId === "walk_in" ? null : selectedMemberId;
+      const selectedMember = members.find(member => member.id === actualMemberId);
+      const salesBatch = selectedItems.map(item => ({
+        product_id: item.id, member_id: actualMemberId, quantity: item.quantity,
+        unit_price: item.price, total_price: Math.round(item.price * 100) * item.quantity / 100,
         payment_method: selectedPayment,
       }));
-
-      // 2. Transact the sales
-      await window.api.sales.createBatch(salesBatch);
-
-     setLastSaleData({
-  items: [...selectedItems],
-  total: total,
-  payment: selectedPayment,
-  date: new Date(),
-  // Try to find the actual member's name, otherwise default to "Walk-in"
-  memberName: actualMemberId 
-    ? members.find(m => m.id === actualMemberId)?.first_name + " " + members.find(m => m.id === actualMemberId)?.last_name 
-    : "Walk-in"
-});
-
-// 2. Open the receipt popup
-setIsReceiptModalOpen(true);
-      clearCart();
-      loadData(); // Refresh history
+      const fingerprint = JSON.stringify(salesBatch);
+      if (pendingCheckout.current?.fingerprint !== fingerprint) {
+        pendingCheckout.current = { fingerprint, requestId: crypto.randomUUID() };
+      }
+      const completed = await window.api.sales.createBatch(salesBatch, pendingCheckout.current.requestId);
+      setLastSaleData({
+        items: completed.map(item => ({
+          name: item.product_name, price: item.unit_price, quantity: item.quantity, total_price: item.total_price,
+        })),
+        total: completed.reduce((cents, item) => cents + Math.round(item.total_price * 100), 0) / 100,
+        payment: selectedPayment, date: new Date(),
+        memberName: selectedMember ? `${selectedMember.firstName} ${selectedMember.lastName}` : "Walk-in",
+      });
+      pendingCheckout.current = null;
+      setIsReceiptModalOpen(true);
+      resetCart();
+      await loadData();
     } catch (error) {
       console.error("Sale processing failed", error);
-      alert("Failed to process sale. Check console for details.");
+      alert(error instanceof Error ? error.message : "Failed to process sale.");
+    } finally {
+      checkoutRef.current = false;
+      setIsCheckingOut(false);
     }
   };
+
     const handlePrintReceipt = () => {
   window.print();
   setIsReceiptModalOpen(false); // Optional: close the modal after opening the print dialog
@@ -283,7 +282,7 @@ setIsReceiptModalOpen(true);
           {lastSaleData.items.map((item: any, i: number) => (
             <div key={i} className="flex justify-between">
               <span>{item.name} x{item.quantity}</span>
-              <span>{item.price.toLocaleString()} DZD</span>
+              <span>{item.total_price.toLocaleString()} DZD</span>
             </div>
           ))}
         </div>
@@ -495,6 +494,9 @@ setIsReceiptModalOpen(true);
                         <p className="text-xl text-blue-600 font-semibold mt-4">
                           {product.price.toLocaleString()} DZD
                         </p>
+                        <p className={product.stock > 0 ? "text-sm text-gray-500" : "text-sm text-red-600"}>
+                          {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
+                        </p>
                       </div>
                     ))}
                 </div>
@@ -564,7 +566,7 @@ setIsReceiptModalOpen(true);
                         <Badge
                           variant="outline"
                           className={
-                            sale.payment_method === "Cash"
+                            sale.payment_method?.toUpperCase() === "CASH"
                               ? "border-green-500 text-green-700 bg-green-50"
                               : "border-blue-500 text-blue-700 bg-blue-50"
                           }
@@ -606,6 +608,7 @@ setIsReceiptModalOpen(true);
                 <Label htmlFor="member">Link to Member (Optional)</Label>
                 <Select
                   value={selectedMemberId}
+                  disabled={isCheckingOut}
                   onValueChange={setSelectedMemberId}
                 >
                   <SelectTrigger className="border-blue-300">
@@ -641,7 +644,7 @@ setIsReceiptModalOpen(true);
                             {item.name}
                           </p>
                           <p className="text-blue-600 text-xs mt-1 font-semibold">
-                            {item.price.toLocaleString()} DZD
+                            {item.quantity} × {item.price.toLocaleString()} DZD = {(Math.round(item.price * 100) * item.quantity / 100).toLocaleString()} DZD
                           </p>
                         </div>
                         <Button
@@ -685,6 +688,7 @@ setIsReceiptModalOpen(true);
                           ? "bg-green-600 hover:bg-green-700 text-white shadow-md"
                           : "border-gray-200 text-gray-600 hover:bg-gray-50"
                       }
+                      disabled={isCheckingOut}
                       onClick={() => setSelectedPayment("Cash")}
                     >
                       {selectedPayment === "Cash" && (
@@ -701,6 +705,7 @@ setIsReceiptModalOpen(true);
                           ? "bg-blue-600 hover:bg-blue-700 text-white shadow-md"
                           : "border-gray-200 text-gray-600 hover:bg-gray-50"
                       }
+                      disabled={isCheckingOut}
                       onClick={() => setSelectedPayment("Card")}
                     >
                       {selectedPayment === "Card" && (
@@ -715,16 +720,16 @@ setIsReceiptModalOpen(true);
                 <div className="space-y-3">
                   <Button
                      onClick={processSale}
-                     disabled={selectedItems.length === 0}
+                     disabled={isCheckingOut || selectedItems.length === 0}
                     className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg font-semibold shadow-lg transition-transform active:scale-[0.98] disabled:opacity-50"
                   >
                     <DollarSign className="w-6 h-6 mr-2" />
-                    Complete Sale
+                    {isCheckingOut ? "Processing..." : "Complete Sale"}
                   </Button>
                   <Button
                     variant="ghost"
                     onClick={clearCart}
-                    disabled={selectedItems.length === 0}
+                    disabled={isCheckingOut || selectedItems.length === 0}
                     className="w-full text-gray-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-50"
                   >
                     Cancel Order

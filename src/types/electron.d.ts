@@ -1,10 +1,10 @@
-import { Member, Plan, Subscription, AccessLog, Transaction } from "./types";
+import { Member, MemberSummary, Plan, Subscription, AccessLog, Transaction } from "./types";
 
 export interface ElectronApi {
   invoke: (channel: string, ...args: any[]) => Promise<any>;
   members: {
     save: (data: any) => Promise<any>;
-    getAll: () => Promise<Member[]>;
+    getAll: () => Promise<MemberSummary[]>;
     getById: (id: string) => Promise<Member>;
     create: (member: Partial<Member>) => Promise<any>;
     update: (id: string, member: Partial<Member>) => Promise<any>;
@@ -61,8 +61,8 @@ export interface ElectronApi {
     delete: (id: number) => Promise<any>;
   };
   sales: {
-    create: (sale: any) => Promise<any>;
-    createBatch: (sales: any[]) => Promise<any[]>;
+    create: (sale: any, requestId?: string) => Promise<any>;
+    createBatch: (sales: any[], requestId?: string) => Promise<any[]>;
     getAll: () => Promise<any[]>;
     getRecent: (limit: number) => Promise<any[]>;
   };

@@ -7,7 +7,7 @@ export const memberRepository = {
     // Efficient "Latest" retrieval in SQLite:
     const stmt = db.prepare(`
         SELECT 
-            m.id, m.first_name, m.last_name, m.phone, m.email, m.qr_code, m.photo_url, m.photo, m.created_at,
+            m.id, m.first_name, m.last_name, m.phone, m.email, m.qr_code, m.photo_url, m.photo, m.created_at, m.is_archived,
             s.id as subscription_id,
             s.plan_id, s.price_paid, s.auto_renew,
             s.status as subscription_status,
@@ -24,6 +24,7 @@ export const memberRepository = {
             LIMIT 1
         )
         LEFT JOIN plans p ON s.plan_id = p.id
+        WHERE m.is_archived = 0
         ORDER BY m.created_at DESC
     `);
 
@@ -37,6 +38,7 @@ export const memberRepository = {
       photoUrl: row.photo_url,
       photo: row.photo,
       createdAt: row.created_at,
+      isArchived: !!row.is_archived,
       subscription: row.subscription_id
         ? {
             id: row.subscription_id,
@@ -67,7 +69,7 @@ export const memberRepository = {
     expireSubscriptions(db);
     const stmt = db.prepare(`
         SELECT 
-            m.id, m.first_name, m.last_name, m.phone, m.email, m.qr_code, m.photo_url, m.photo, m.created_at,
+            m.id, m.first_name, m.last_name, m.phone, m.email, m.qr_code, m.photo_url, m.photo, m.created_at, m.is_archived,
             s.id as subscription_id,
             s.plan_id, s.price_paid, s.auto_renew,
             s.status as subscription_status,
@@ -100,6 +102,7 @@ export const memberRepository = {
       photoUrl: row.photo_url,
       photo: row.photo,
       createdAt: row.created_at,
+      isArchived: !!row.is_archived,
       subscription: row.subscription_id
         ? {
             id: row.subscription_id,
@@ -130,38 +133,18 @@ export const memberRepository = {
        UPDATE members 
       SET first_name = @firstName, last_name = @lastName, phone = @phone, 
           email = @email, photo_url = @photoUrl, photo = @photo, updated_at = CURRENT_TIMESTAMP
-      WHERE id = @id
+      WHERE id = @id AND is_archived = 0
     `);
     // Pass id specifically along with the member object
     return stmt.run({ ...member, id });
   },
 
-  delete: (id) => {
-    const deleteSubscriptions = db.prepare(
-      "DELETE FROM subscriptions WHERE member_id = ?",
-    );
-    const deleteAccessLogs = db.prepare(
-      "DELETE FROM access_logs WHERE member_id = ?",
-    );
-    const deleteTransactions = db.prepare(
-      "DELETE FROM transactions WHERE member_id = ?",
-    );
-    const unlinkSales = db.prepare("UPDATE sales_history SET member_id = NULL WHERE member_id = ?");
-    const deleteMember = db.prepare("DELETE FROM members WHERE id = ?");
-
-    const transaction = db.transaction(() => {
-      // Delete children of subscriptions AND members first
-      unlinkSales.run(id);
-      deleteAccessLogs.run(id);
-      deleteTransactions.run(id);
-
-      // Delete subscriptions (child of members, parent of access_logs/transactions)
-      deleteSubscriptions.run(id);
-
-      // Delete member last
-      deleteMember.run(id);
-    });
-
-    return transaction(id);
-  },
+  // Preserve the public IPC method while making removal non-destructive.
+  delete: (id) => db.transaction(() => {
+    db.prepare("UPDATE subscriptions SET status = 'CANCELLED' WHERE member_id = ? AND status = 'ACTIVE'").run(id);
+    return db.prepare(`
+      UPDATE members SET is_archived = 1, archived_at = COALESCE(archived_at, CURRENT_TIMESTAMP),
+        updated_at = CURRENT_TIMESTAMP WHERE id = ?
+    `).run(id);
+  })(),
 };

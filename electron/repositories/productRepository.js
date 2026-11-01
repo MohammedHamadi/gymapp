@@ -24,7 +24,9 @@ export const createProduct = (product) => {
 
 // Update an existing product
 export const updateProduct = (id, product) => {
-  const { name, price, type, stock, is_active } = product;
+  const existing = getProductById(id);
+  if (!existing) throw new Error("Product does not exist.");
+  const { name, price, type, stock, is_active = existing.is_active ?? 1 } = product;
   const stmt = db.prepare(
     "UPDATE products SET name = ?, price = ?, type = ?, stock = ?, is_active = ? WHERE id = ?",
   );

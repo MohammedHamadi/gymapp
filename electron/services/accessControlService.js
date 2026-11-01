@@ -38,7 +38,30 @@ export const accessControlService = {
       log("GRANTED");
       return { status: "GRANTED", member: memberInfo, message: "Check-out successful" };
     }
+    if (member.is_archived) return deny("This member has been archived.");
     const subscriptions = subscriptionRepository.findActiveByMemberId(id);
+    const current = subscriptions[0];
+    const last = accessLogRepository.findLastGrantedMovement(id);
+    // Persisted movement history protects against scan bounce across screens/restarts.
+    // A checkout or a renewal into a new subscription starts a new visit.
+    if (last?.type === "CHECK_IN" && last.elapsed_seconds >= 0 && last.elapsed_seconds < 3) {
+      const previous = current?.id === last.subscription_id ? current
+        : !current && last.subscription_id ? subscriptionRepository.findById(last.subscription_id) : null;
+      if (previous && (previous.status === "ACTIVE"
+          || (previous.status === "EXPIRED" && previous.remaining_sessions === 0))
+        && (!previous.end_date || String(previous.end_date).slice(0, 10) >= localDate())
+        && (subscriptionId == null || Number(subscriptionId) === previous.id)) {
+        return {
+          status: "GRANTED", duplicate: true, member: memberInfo,
+          message: "Already checked in. Duplicate scan ignored.", warning: null,
+          subscription: {
+            id: previous.id, planName: previous.plan_name || db.prepare("SELECT name FROM plans WHERE id = ?").get(previous.plan_id)?.name,
+            remainingSessions: previous.remaining_sessions,
+            isAboutToEnd: previous.remaining_sessions !== null && previous.remaining_sessions <= 1,
+          },
+        };
+      }
+    }
     if (!subscriptions || subscriptions.length === 0) return deny("No active subscription");
     const sub = (subscriptionId != null)
       ? subscriptions.find((s) => s.id === Number(subscriptionId)) || subscriptions[0]
@@ -62,5 +85,5 @@ export const accessControlService = {
       warning: isAboutToEnd ? "Sessions about to end" : null,
       subscription: { id: sub.id, planName: sub.plan_name, remainingSessions, isAboutToEnd },
     };
-  })(),
+  }).immediate(),
 };

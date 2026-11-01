@@ -4,6 +4,7 @@ import fs from "fs";
 import { app } from "electron";
 import { fileURLToPath } from "url";
 import { upgradeSubscriptions } from "./subscriptionState.js";
+import { upgradeOperations } from "./operationalState.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +26,7 @@ const schemaPath = path.join(__dirname, "schema.sql");
 const schema = fs.readFileSync(schemaPath, "utf8");
 db.exec(schema);
 
-upgradeSubscriptions(db, `${dbPath}.before-subscription-fix-${Date.now()}.db`);
+const backedUp = upgradeSubscriptions(db, `${dbPath}.before-subscription-fix-${Date.now()}.db`);
+upgradeOperations(db, `${dbPath}.before-sales-fix-${Date.now()}.db`, backedUp);
 
 export default db;

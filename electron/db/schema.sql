@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS members (
     qr_code TEXT UNIQUE NOT NULL,
     photo_url TEXT,
     photo BLOB,
+    is_archived INTEGER NOT NULL DEFAULT 0,
+    archived_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -101,4 +103,12 @@ CREATE TABLE IF NOT EXISTS sales_history (
     sale_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (product_id) REFERENCES products(id),
     FOREIGN KEY (member_id) REFERENCES members(id)
+);
+
+-- Durable request IDs make checkout retries safe.
+CREATE TABLE IF NOT EXISTS sales_checkouts (
+    id TEXT PRIMARY KEY,
+    request_json TEXT NOT NULL,
+    result_json TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

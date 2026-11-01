@@ -1,7 +1,7 @@
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 const result = spawnSync(require("electron"), [
-  "--experimental-vm-modules", "--test", path.join(__dirname, "../tests/subscriptions.test.cjs"),
+  "--experimental-vm-modules", "--test", path.join(__dirname, "../tests/subscriptions.test.cjs"), path.join(__dirname, "../tests/operations.test.cjs"),
 ], {
   cwd: path.join(__dirname, ".."),
   env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },

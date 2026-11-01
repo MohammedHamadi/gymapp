@@ -174,8 +174,8 @@ export default function App() {
   const handleDelete = async () => {
     if (selectedMember) {
       setConfirmConfig({
-        title: "Delete Member",
-        message: `Are you sure you want to delete ${selectedMember.firstName} ${selectedMember.lastName}?`,
+        title: "Archive Member",
+        message: `Archive ${selectedMember.firstName} ${selectedMember.lastName}? Active access will be cancelled. Payment and membership history will be preserved.`,
         variant: "danger",
         onConfirm: async () => {
           try {
@@ -185,10 +185,10 @@ export default function App() {
             setSelectedMember(null);
 
             // Delayed Alert
-            setTimeout(() => alert("Member deleted successfully!"), 100);
+            setTimeout(() => alert("Member archived successfully!"), 100);
           } catch (e) {
             console.error(e);
-            setTimeout(() => alert("Failed to delete member"), 100);
+            setTimeout(() => alert("Failed to archive member"), 100);
           }
           setConfirmConfig(null);
         },

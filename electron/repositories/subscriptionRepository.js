@@ -2,11 +2,11 @@ import db from "../db/client.js";
 import { expireSubscriptions } from "../db/subscriptionState.js";
 import { isDate, localDate } from "../../shared/subscriptionRules.js";
 
-function normalize(subscription, { allowInactivePlan = false } = {}) {
+function normalize(subscription, { allowInactivePlan = false, existing = null } = {}) {
   const memberId = subscription.memberId;
-  if (!db.prepare("SELECT 1 FROM members WHERE id = ?").get(memberId)) {
-    throw new Error("Member does not exist.");
-  }
+  const member = db.prepare("SELECT is_archived FROM members WHERE id = ?").get(memberId);
+  if (!member) throw new Error("Member does not exist.");
+  if (member.is_archived) throw new Error("This member has been archived.");
   const plan = db.prepare("SELECT * FROM plans WHERE id = ?").get(subscription.planId);
   if (!plan || (!allowInactivePlan && !plan.is_active)) {
     throw new Error("Select an active, existing plan.");
@@ -17,7 +17,10 @@ function normalize(subscription, { allowInactivePlan = false } = {}) {
   if (subscription.endDate && subscription.endDate < subscription.startDate) {
     throw new Error("End date cannot be before start date.");
   }
-  if (plan.duration_days && !subscription.endDate) {
+  // Existing purchases keep their own limits when the plan template changes.
+  const needsEndDate = existing ? existing.end_date !== null : !!plan.duration_days;
+  const needsSessions = existing ? existing.remaining_sessions !== null : !!plan.session_count;
+  if (needsEndDate && !subscription.endDate) {
     throw new Error("This plan requires an end date.");
   }
   const pricePaid = Number(subscription.pricePaid);
@@ -27,11 +30,11 @@ function normalize(subscription, { allowInactivePlan = false } = {}) {
   let remainingSessions = subscription.remainingSessions;
   if (remainingSessions === "" || remainingSessions == null) remainingSessions = null;
   else remainingSessions = Number(remainingSessions);
-  if (!plan.session_count && remainingSessions === 0) remainingSessions = null;
+  if (!needsSessions && remainingSessions === 0) remainingSessions = null;
   if (remainingSessions !== null && (!Number.isSafeInteger(remainingSessions) || remainingSessions < 0)) {
     throw new Error("Sessions must be a non-negative whole number.");
   }
-  if (plan.session_count && remainingSessions === null) {
+  if (needsSessions && remainingSessions === null) {
     throw new Error("This plan requires a session count.");
   }
   if (!subscription.endDate && remainingSessions === null) {
@@ -150,7 +153,7 @@ export const subscriptionRepository = {
     if (subscription.memberId !== old.member_id || Number(subscription.planId) !== old.plan_id) {
       throw new Error("A subscription's member and plan cannot be changed. Use Renew to switch plans.");
     }
-    const sub = normalize(subscription, { allowInactivePlan: true });
+    const sub = normalize(subscription, { allowInactivePlan: true, existing: old });
     if (sub.status === "ACTIVE") ensureSingleActive(sub.memberId, id);
     const result = db.prepare(`
       UPDATE subscriptions SET start_date = @startDate, end_date = @endDate,

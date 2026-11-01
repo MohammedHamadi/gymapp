@@ -18,6 +18,7 @@ export function saveMember({ member, subscription, subscriptionId }) {
     if (id) {
       const existing = memberRepository.findById(id);
       if (!existing) throw new Error("Member does not exist.");
+      if (existing.is_archived) throw new Error("This member has been archived.");
       details.photoUrl = member.photoUrl === undefined ? existing.photo_url : details.photoUrl;
       memberRepository.update(id, details);
     } else {

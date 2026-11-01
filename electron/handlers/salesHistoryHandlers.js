@@ -2,12 +2,12 @@ import { ipcMain } from "electron";
 import * as salesRepo from "../repositories/salesHistoryRepository.js";
 
 export function setupSalesHistoryHandlers() {
-  ipcMain.handle("sales:create", (event, data) => {
-    return salesRepo.createSale(data);
+  ipcMain.handle("sales:create", (event, data, requestId) => {
+    return salesRepo.createSale(data, requestId);
   });
 
-  ipcMain.handle("sales:createBatch", (event, data) => {
-    return salesRepo.createSalesBatch(data);
+  ipcMain.handle("sales:createBatch", (event, data, requestId) => {
+    return salesRepo.createSalesBatch(data, requestId);
   });
 
   ipcMain.handle("sales:getAll", () => {

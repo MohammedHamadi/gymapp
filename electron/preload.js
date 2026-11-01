@@ -69,8 +69,8 @@ contextBridge.exposeInMainWorld("api", {
     delete: (id) => ipcRenderer.invoke("products:delete", id),
   },
   sales: {
-    create: (data) => ipcRenderer.invoke("sales:create", data),
-    createBatch: (data) => ipcRenderer.invoke("sales:createBatch", data),
+    create: (data, requestId) => ipcRenderer.invoke("sales:create", data, requestId),
+    createBatch: (data, requestId) => ipcRenderer.invoke("sales:createBatch", data, requestId),
     getAll: () => ipcRenderer.invoke("sales:getAll"),
     getRecent: (limit) => ipcRenderer.invoke("sales:getRecent", limit),
   },
